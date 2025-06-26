@@ -1,7 +1,7 @@
 import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import UTC
-from TelegramBots.anonChat.database.model import User, Subscription, get_session
+from database.model import User, Subscription, get_session
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 from core.util import delete_user_subscription
