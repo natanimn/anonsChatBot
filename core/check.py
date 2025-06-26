@@ -50,7 +50,7 @@ async def first(_, __, callback: CallbackQuery):
 async def no_gender(_, __, callback: CallbackQuery | Message | PreCheckoutQuery):
     user_id = callback.from_user.id
     data = await get_user_cache(user_id)
-    return data['gender'] == ''
+    return not data['gender']
 
 async def report(_, __, callback: CallbackQuery):
     return callback.data.startswith('report_chat')
