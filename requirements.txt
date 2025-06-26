@@ -1,0 +1,7 @@
+kurigram
+tgcrypto
+sqlalchemy
+redis[asyncio]
+asyncpg
+sqlalchemy[asyncio]
+git+https://github.com/kotttee/pyrogram_patch.git

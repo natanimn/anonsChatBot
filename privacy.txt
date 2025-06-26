@@ -1,0 +1,18 @@
+**📋 Privacy and policy**
+
+**❓ What kind of data does the bot collect?**
+ - __We only collect the basic information needs the bot in order to function and keeps it for only the time needed.__
+
+❓ **Does this bot store or read my chats?**
+ - __We don't store/read chat messages. Instead, for /delete command purpose, we only store message ids from both side for a short period of time as a cache, which will
+ be deleted immediately after the conversation between 2 people ends.
+
+❓ **What information may we collect?**
+ - __Your user id
+ - The info you provide in your settings
+ - Your last chat partner id
+ - When you were last seen using the bot
+ - Your daily chat count__
+
+❓ **What information can bots access?**
+ - [Telegram Privacy Policy - Bots](https://telegram.org/privacy#6-bot-messages)

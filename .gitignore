@@ -1,0 +1,11 @@
+/__pycache__
+/cache/__pycache__
+/core/__pycache__
+/database/__pycache__
+/plugins/__pycache__
+/plugins/commands/__pycache__
+/schedules/__pycache__
+/keyboards/__pycache__
+anon_chat.session
+.anon_chat.session-journal
+__init__.py
