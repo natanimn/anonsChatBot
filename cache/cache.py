@@ -56,7 +56,8 @@ async def create_user_cache(user_id: int):
             'report_count': user.report_count,
             'release_date': str(user.release_date or '')
         }
-        await cache_client.hsetex(f"user-{user.id}-cache", mapping=data, ex=3600)
+        await cache_client.hset(f"user-{user.id}-cache", mapping=data)
+        await cache_client.expire(f"user-{user.id}-cache", 3600)
 
 async def user_exists(user_id: int):
     data = await get_user_cache(user_id)
@@ -133,11 +134,11 @@ async def create_chat_cache(user_id, partner_id):
     if chat:=await get_chat_cache(user_id, partner_id):
         return chat
     else:
-        chat = await cache_client.hsetex(f'{user_id}-chat-{partner_id}', mapping={
+        chat = await cache_client.hset(f'{user_id}-chat-{partner_id}', mapping={
             user_id: '{}',
             partner_id: '{}',
             'created_at': str(datetime.now())
-        }, ex=3600*24)
+        })
         return chat
 
 
