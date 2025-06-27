@@ -1,5 +1,5 @@
-**📜 Bot rules**\n
-<blockquote>
+**📜 Bot rules**
+<blockquote expandable>
 1. **Respect Privacy:** Do not ask for or share personal information, such as names, addresses, phone numbers, or social media handles, Unless both parties Explicitly Agree.
 
 2. **No Hate Speech:** Avoid language or content that is discriminatory, offensive, or inflammatory. Mutual consent does not override this rule.
@@ -19,6 +19,7 @@
 9. **Bot Purpose:** Use the bot only for its intended purpose, as outlined in its description. Any deviation, even if agreed upon by both users, is not allowed.
 
 10. **Accountability:** Remember that you are responsible for what you say or share while using the chatbot, regardless of mutual consent.\n</blockquote>
+
 **⚠️ Stay Alert**
 __Some users may misrepresent their Gender. For example, some Men may pose as Women or Vice Versa.While we strive to create an honest and respectful platform,
 Let's work together to keep this space genuine and safe!__

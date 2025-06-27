@@ -69,7 +69,10 @@ async def get_chat_message(bot: app, message: Message):
             now = datetime.datetime.now()
             history = await get_chat_cache(user_id, partner_id)
             created_at = history['created_at']
+            print("Created at", created_at)
+            print("Now", now)
             total = created_at + timedelta(minutes=2)
+            print("Created at + 2 minutes", total)
             if now < total:
                 return await message.reply("**☝️ You can't send medias now**")
             else:

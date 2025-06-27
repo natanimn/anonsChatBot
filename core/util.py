@@ -52,9 +52,12 @@ async def search_partner(user_id: int) -> User | None:
         start = time.time()
         user  = await get_user_cache(user_id)
         attempts = 0
+
         while not event.is_set() and time.time() < start + timeout and user['current_state'] == State.SEARCHING:
             user = await get_user_cache(user_id)
-            if user['current_state'] != State.SEARCHING: break
+            if user['current_state'] != State.SEARCHING:
+                break
+
             filters = [
                 User.id != user_id,
                 User.current_state == State.SEARCHING,
@@ -63,7 +66,7 @@ async def search_partner(user_id: int) -> User | None:
             ]
             if user['is_premium']:
                 if preference:=user['preference']:
-                    if countries:=preference.get('country', []): # Add location based filtering
+                    if countries:=preference.get('country', []): # country based filtering
                         filters.append(or_(
                             and_(
                                 User.country.in_(countries),
@@ -145,7 +148,8 @@ async def search_partner(user_id: int) -> User | None:
                     try:
                         partner_id = matched_scalar.id
                         m_event = await get_event(partner_id)
-                        if not m_event: continue
+                        if not m_event:
+                            continue
 
                         if not user['is_premium']:
                             count = user['chat_count'] + 1
@@ -191,7 +195,7 @@ async def search_partner(user_id: int) -> User | None:
                         print(e)
                     event.set()
                     break
-                wait = min(0.5 + attempts*0.1 , 5)
+                wait = min(0.1 + attempts*0.1 , 5)
                 await asyncio.sleep(wait)
                 attempts += 1
 

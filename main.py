@@ -8,17 +8,6 @@ from pyrogram_patch.fsm.storages import MemoryStorage
 from pyrogram_patch.patch import patch
 from pyrogram.types import BotCommand
 
-"""
-/start - Start message
-/chat - Find a partner
-/exit - For stopping the conversation
-/premium - Subscribe to premium
-/rechat - Connect with previous partner 💎
-/delete - Delete sent message to your partner 💎
-/setting - Manage profile and preference
-/privacy - Privacy Policy
-/help - Bot help
-/rules - Rules of the chat.\n"""
 async def add_commands(bot: Client):
     await bot.set_bot_commands([
         BotCommand('start', "Start message"),

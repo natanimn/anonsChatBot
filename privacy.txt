@@ -4,8 +4,7 @@
  - __We only collect the basic information needs the bot in order to function and keeps it for only the time needed.__
 
 ❓ **Does this bot store or read my chats?**
- - __We don't store/read chat messages. Instead, for /delete command purpose, we only store message ids from both side for a short period of time as a cache, which will
- be deleted immediately after the conversation between 2 people ends.
+ - __We don't store/read chat messages. Instead, for /delete command purpose, we only store message ids from both side for a short period of time as a cache, which will be deleted immediately after the conversation between 2 people ends.
 
 ❓ **What information may we collect?**
  - __Your user id

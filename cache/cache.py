@@ -137,7 +137,7 @@ async def create_chat_cache(user_id, partner_id):
         chat = await cache_client.hset(f'{user_id}-chat-{partner_id}', mapping={
             user_id: '{}',
             partner_id: '{}',
-            'created_at': str(datetime.now())
+            'created_at': datetime.now().isoformat()
         })
         return chat
 

@@ -23,13 +23,22 @@ from config import Config
 
 from . import start # Should be imported first
 
-@app.on_raw_update(filters=filters.create(check.no_gender))
-async def no_gender_update(bot: app, _2, _3, _4):
-    await bot.send_message(list(_3.keys())[0],
-        "**🌼 Welcome again\n\n**"
-        "❕ __To continue, you have to select your gender first__",
-        reply_markup=keyboard.first_time_gender()
-    )
+
+# @app.on_message(filters.create(check.no_gender))
+# async def no_gender_update(bot: app, message: Message):
+#     user_id = message.from_user.id
+#
+#     if message.text == '/start':
+#         await start.start(bot, message)
+#         return
+#     gender  = await get_value(user_id, 'gender')
+#
+#     if not gender:
+#         await bot.send_message(user_id,
+#             "**🌼 Welcome again\n\n**"
+#             "❕ __To continue, you have to select your gender first__",
+#             reply_markup=keyboard.first_time_gender()
+#         )
 
 from . import chat
 from . import exit_chat
