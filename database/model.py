@@ -42,7 +42,7 @@ class User(Base):
     preference: Mapped['Preference']  = relationship("Preference", back_populates='user', uselist=False)
     created_at    = mapped_column(DateTime, default=datetime.datetime.now())
     current_state = mapped_column(Integer, default=1)
-    chatting_with = mapped_column(BigInteger, unique=True)
+    chatting_with = mapped_column(BigInteger, default=0)
     last_partner_id = mapped_column(BigInteger, default=0)
     india_region  = mapped_column(String)
     chat_count    = mapped_column(Integer, default=0)
