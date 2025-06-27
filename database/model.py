@@ -22,7 +22,11 @@ from contextlib import asynccontextmanager
 from config import Config
 
 async_engine  = create_async_engine(Config.DATABASE_URI)
-async_session = sessionmaker(bind=async_engine, class_=AsyncSession, expire_on_commit=False)
+async_session = sessionmaker(
+    bind=async_engine,
+    class_=AsyncSession,
+    expire_on_commit=False
+)
 
 class Base(AsyncAttrs, DeclarativeBase):
     pass
@@ -39,7 +43,7 @@ class User(Base):
     created_at    = mapped_column(DateTime, default=datetime.datetime.now())
     current_state = mapped_column(Integer, default=1)
     chatting_with = mapped_column(BigInteger, unique=True)
-    last_partner_id = mapped_column(BigInteger)
+    last_partner_id = mapped_column(BigInteger, default=0)
     india_region  = mapped_column(String)
     chat_count    = mapped_column(Integer, default=0)
     chat_closed_date = mapped_column(DATE)

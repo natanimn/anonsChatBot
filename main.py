@@ -7,6 +7,7 @@ from database.model import Base, async_engine
 from pyrogram_patch.fsm.storages import MemoryStorage
 from pyrogram_patch.patch import patch
 from pyrogram.types import BotCommand
+from cache.cache import reset_users_cache
 
 async def add_commands(bot: Client):
     await bot.set_bot_commands([
@@ -46,7 +47,8 @@ async def run_bot():
 
     await asyncio.gather(
         add_unrestrict(),
-        add_unsubscription()
+        add_unsubscription(),
+        reset_users_cache()
     )
     await bot.start()
     await add_commands(bot)

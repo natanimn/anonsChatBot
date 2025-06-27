@@ -380,7 +380,7 @@ async def first_gender(_, call: CallbackQuery):
     if gender == 'next':
         await call.edit_message_reply_markup()
         call.message.from_user.id = call.from_user.id
-        await start.start(_, call.message)
+        await start(_, call.message)
 
     else:
         if gender == current_gender:

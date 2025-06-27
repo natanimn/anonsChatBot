@@ -48,9 +48,9 @@ async def create_user_cache(user_id: int):
                 'end_date':   user.subscription.end_date,
                 'type':       user.subscription.type
             }) if user.is_premium else '{}',
-            'current_state': 1,
+            'current_state': user.current_state,
             'chatting_with': user.chatting_with or 0,
-            'last_partner_id': user.last_partner_id or 0,
+            'last_partner_id': user.last_partner_id,
             'chat_count': user.chat_count,
             'chat_closed_date': str(user.chat_closed_date or date.today() - timedelta(days=1)),
             'report_count': user.report_count,
@@ -124,6 +124,8 @@ async def get_value(user_id: int, key: str):
     :return:
     """
     result = await get_user_cache(user_id)
+    if result is None:
+        return None
     return result[key]
 
 async def create_chat_cache(user_id, partner_id):
@@ -131,16 +133,11 @@ async def create_chat_cache(user_id, partner_id):
     Create chat cache for the first time
     :return:
     """
-    if chat:=await get_chat_cache(user_id, partner_id):
-        return chat
-    else:
-        chat = await cache_client.hset(f'{user_id}-chat-{partner_id}', mapping={
+    chat = await cache_client.hset(f'{user_id}-chat-{partner_id}', mapping={
             user_id: '{}',
             partner_id: '{}',
             'created_at': datetime.now().isoformat()
-        })
-        return chat
-
+    })
 
 def parse_chat(chat: dict) -> dict:
     for k, v in chat.items():
@@ -161,7 +158,7 @@ async def get_chat_cache(user_id, partner_id) -> dict | None:
     """
     if chat := await cache_client.hgetall(f'{user_id}-chat-{partner_id}'):
         return parse_chat(chat)
-    elif chat := await cache_client.hgetall(f'{partner_id}-chat-{partner_id}'):
+    elif chat := await cache_client.hgetall(f'{partner_id}-chat-{user_id}'):
         return parse_chat(chat)
     else: return None
 
@@ -199,10 +196,18 @@ async def delete_chat_history(user_id, partner_id):
     :param partner_id:
     :return:
     """
-    try:
-        return await cache_client.delete(f"{partner_id}-chat-{partner_id}")
-    except:
-        try:
-            return await cache_client.delete(f"{user_id}-chat-{partner_id}")
-        except:
-            return None
+    filename = await get_chat_cache_file(user_id, partner_id)
+    if filename:
+        await cache_client.delete(filename)
+
+async def reset_users_cache():
+    size = 50_000
+    batch = []
+    async for key in cache_client.scan_iter(match="user-*"):
+        batch.append(key)
+        if len(batch) >= size:
+            await cache_client.unlink(*batch)
+            batch = []
+    if batch:
+        await cache_client.unlink(*batch)
+
