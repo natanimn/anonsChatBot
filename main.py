@@ -19,7 +19,8 @@ async def add_commands(bot: Client):
         BotCommand('delete', "Delete sent message from partner"),
         BotCommand('setting', "Manage setting"),
         BotCommand('privacy', "Privacy and Policy"),
-        BotCommand('help', "Get help")
+        BotCommand('help', "Get help"),
+        BotCommand('paysupport', "Payment support")
     ])
 
 async def run_bot():

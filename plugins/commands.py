@@ -420,5 +420,14 @@ async def privacy(_, message: Message):
         await message.reply(file.read(), disable_web_page_preview=True)
         file.close()
 
+@app.on_message(filters.command('paysupport'))
+async def pay_support(_, message: Message):
+    await message.reply(
+        "**If you have any questions, do not hesitate to get in touch 👇**",
+        reply_markup=keyboard.support()
+
+    )
+
+
 
 
