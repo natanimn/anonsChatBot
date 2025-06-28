@@ -80,7 +80,8 @@ async def get_report_proof(bot: app, message: Message, state: State):
                     unrestrict_user,
                     'date',
                     run_date=tomorrow,
-                    args=(partner_id,)
+                    args=(partner_id,),
+                    id=f'ban_user-{partner_id}'
                 )
 
         else:
@@ -106,9 +107,9 @@ async def get_report_proof(bot: app, message: Message, state: State):
         )
         try:
             await bot.send_photo(
-                Config.CHANNEL_ID,
+                Config.REPORT_CHANNEL_ID,
                 message.photo.file_id,
-                f"**REPORTED BY ID: <code>{message.from_user.id}</code>\n"
+                f"**REPORTER ID**: <code>{message.from_user.id}</code>\n"
                 f"**REPORT CATEGORY**: {data['category']}\n"
                 f"**REPORTED USER ID**: <code>{data['partner_id']}</code>"
             )

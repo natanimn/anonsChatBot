@@ -3,6 +3,7 @@ from pyrogram.types import Message, CallbackQuery, PreCheckoutQuery
 from .state import State
 from keyboards.keyboard import keyboards
 from cache.cache import get_value, get_user_cache
+from config import Config
 
 async def is_keyboard(_, __, message: Message):
     return message.text in keyboards
@@ -66,5 +67,5 @@ async def india_region(_, __, callback: CallbackQuery):
 async def india_region_preference(_, __, callback: CallbackQuery):
     return callback.data.startswith('pr_india_region')
 
-# async def gender(_, __, callback: CallbackQuery):
-#     return callback.data.startswith('gender')
+async def admin(_, __, message: Message):
+    return message.from_user.id == Config.ADMIN_ID

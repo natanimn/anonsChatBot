@@ -47,7 +47,7 @@ async def create_user_cache(user_id: int):
                 'start_date': user.subscription.created_at,
                 'end_date':   user.subscription.end_date,
                 'type':       user.subscription.type
-            }) if user.is_premium else '{}',
+            }, default=str) if user.is_premium else '{}',
             'current_state': user.current_state,
             'chatting_with': user.chatting_with or 0,
             'last_partner_id': user.last_partner_id,
@@ -133,10 +133,13 @@ async def create_chat_cache(user_id, partner_id):
     Create chat cache for the first time
     :return:
     """
-    chat = await cache_client.hset(f'{user_id}-chat-{partner_id}', mapping={
-            user_id: '{}',
-            partner_id: '{}',
-            'created_at': datetime.now().isoformat()
+    filename = await get_chat_cache_file(user_id, partner_id)
+    if filename:
+        await cache_client.delete(filename)
+    await cache_client.hset(f'{user_id}-chat-{partner_id}', mapping={
+        user_id: '{}',
+        partner_id: '{}',
+        'created_at': datetime.now().isoformat()
     })
 
 def parse_chat(chat: dict) -> dict:
@@ -165,8 +168,8 @@ async def get_chat_cache(user_id, partner_id) -> dict | None:
 async def get_chat_cache_file(user_id, partner_id) -> str | None:
     if await cache_client.hgetall(f'{user_id}-chat-{partner_id}'):
         return f'{user_id}-chat-{partner_id}'
-    elif await cache_client.hgetall(f'{partner_id}-chat-{partner_id}'):
-        return f'{partner_id}-chat-{partner_id}'
+    elif await cache_client.hgetall(f'{partner_id}-chat-{user_id}'):
+        return f'{partner_id}-chat-{user_id}'
     else:
         return None
 
@@ -211,3 +214,18 @@ async def reset_users_cache():
     if batch:
         await cache_client.unlink(*batch)
 
+async def add_banned_word(word: str | list[str]):
+    data = await get_banned_words()
+    if isinstance(word, list):
+        data.extend(word)
+    else:
+        data.append(word)
+    await cache_client.set('banned-words', json.dumps(data))
+
+async def get_banned_words():
+    cache = await cache_client.get('banned-words')
+    if not cache:
+        data = []
+    else:
+        data = json.loads(cache)
+    return data

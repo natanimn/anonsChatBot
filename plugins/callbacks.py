@@ -355,14 +355,14 @@ async def subscribe_premium(bot: app, call: CallbackQuery):
 
 
     hash_ = str(uuid.uuid4())
-    await update_user_cache(user_id, premium=json.dumps({'hash': hash_, 'price': price, 'id': data}))
+    # await update_user_cache(user_id, premium=json.dumps({'hash': hash_, 'price': price, 'id': data}))
     labeled_price = LabeledPrice(f"{price}", price)
 
     await bot.send_invoice(
         user_id,
         "Subscribe to Premium",
         "Subscribe to premium, and unlock premium features",
-        hash_,
+        data,
         "XTR",
         prices=[labeled_price]
     )

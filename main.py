@@ -1,7 +1,6 @@
 import asyncio
 from pyrogram import Client
 from schedules.schedule import async_scheduler, add_unsubscription, add_unrestrict
-from core import linux
 from config import Config
 from database.model import Base, async_engine
 from pyrogram_patch.fsm.storages import MemoryStorage
@@ -33,7 +32,7 @@ async def run_bot():
         'anon_chat',
         api_id=Config.API_ID,
         api_hash=Config.API_HASH,
-        bot_token=Config.TOKEN,
+        bot_token=Config.TEST_TOKEN,
         plugins={
             'root': 'plugins'
         }

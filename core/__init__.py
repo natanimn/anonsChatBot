@@ -6,6 +6,3 @@ from . import var
 import sys
 
 
-def linux(func):
-    if sys.platform == "linux":
-        return func()

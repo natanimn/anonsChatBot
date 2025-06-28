@@ -15,9 +15,9 @@ COUNTRIES = {
 }
 
 PREMIUM = {
-    '1': 'weekly',
-    '2': 'monthly',
-    '3': 'annual'
+    '1': 100,
+    '2': 250,
+    '3': 1000
 }
 """
 """

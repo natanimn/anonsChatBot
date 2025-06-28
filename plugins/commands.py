@@ -47,10 +47,8 @@ async def start(_, message: Message):
 @app.on_message(filters.create(check.no_gender))
 async def no_gender_update(bot: app, message: Message):
     user_id = message.from_user.id
-
     gender  = await get_value(user_id, 'gender')
-
-    if not gender:
+    if not gender and not message.from_user.is_bot:
         await bot.send_message(user_id,
             "**🌼 Welcome again\n\n**"
             "❕ __To continue, you have to select your gender first__",
@@ -233,14 +231,15 @@ async def re_chat(bot: app, message: Message, **kwargs):
             "❕__Subscribe to premium to use this feature__",
             reply_markup=keyboard.premium_k()
         )
-
+    elif user['current_state'] == State.RESTRICTED:
+        await chat(bot, message)
     else:
         last_partner_id = user['last_partner_id']
         try:
             assert last_partner_id != 0
             last_partner_state = await get_value(last_partner_id, 'current_state')
             assert bool(last_partner_state | (State.CHATTING & State.RESTRICTED)) == True
-            assert user['current_state'] != State.SEARCHING_LAST_PARTNER, "TF"
+            assert user['current_state'] != State.SEARCHING_LAST_PARTNER
         except AssertionError as e:
             if last_partner_id == 0:
                 await message.reply(
@@ -258,7 +257,6 @@ async def re_chat(bot: app, message: Message, **kwargs):
                     "__Your previous partner started chat with another person. "
                     "Send /chat, and find another partner.__"
                 )
-            print(e)
         else:
             try:
                 await bot.send_message(
@@ -312,7 +310,7 @@ async def delete(bot: app, message: Message, **kwargs):
         else:
             user_chat = await get_chat_cache(user_id, user['chatting_with'])
             reply_message = message.reply_to_message
-            if message_id:=user_chat(user_id, {}).get(str(reply_message.id)):
+            if message_id:=user_chat.get(user_id, {}).get(str(reply_message.id)):
                 try:
                     await bot.delete_messages(user['chatting_with'], message_id)
                 except RPCError:

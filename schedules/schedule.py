@@ -4,7 +4,7 @@ from datetime import UTC
 from database.model import User, Subscription, get_session
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
-from core.util import delete_user_subscription
+from core.util import delete_user_subscription, update_user
 from core.events import lock_update
 from core.state import State
 
@@ -25,21 +25,13 @@ async def add_unsubscription():
                 async_scheduler.add_job(
                     unsubscribe_premium,
                     'date',
+                    id=f"subscription-{subscription.user_id}",
                     run_date=subscription.end_date,
                     args=(subscription.user.id,)
                 )
 
 async def unrestrict_user(user_id):
-    async with get_session() as session:
-        await session.execute(
-            update(User)
-            .where(User.id == user_id)
-            .values(
-                current_state=State.RESTRICTED,
-                report_count=0,
-                release_date=None
-            ))
-        await session.commit()
+    await update_user(user_id, current_state=State.NONE, report_count=0, release_date=None)
 
 async def add_unrestrict():
     async with get_session() as session:
@@ -50,12 +42,13 @@ async def add_unrestrict():
         users: list[User] = fetched.scalars()
 
         for user in users:
-            if user.release_date < datetime.datetime.now(UTC):
+            if user.release_date < datetime.datetime.now():
                 await unrestrict_user(user.id)
             else:
                 async_scheduler.add_job(
                     unrestrict_user,
                     'date',
                     run_date=user.release_date,
-                    args=(user.id,)
+                    args=(user.id,),
+                    id=f'ban_user-{user.id}'
                 )

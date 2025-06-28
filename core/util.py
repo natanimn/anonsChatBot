@@ -6,7 +6,7 @@ import os
 import time
 from sqlalchemy.future import select
 from sqlalchemy import update
-from sqlalchemy import and_, or_, not_
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import selectinload
 from .events import get_event, lock_search, lock_update, get_user_lock
 from .state import State
@@ -15,7 +15,8 @@ from cache.cache import (
     get_user_cache,
     get_value,
     delete_chat_history,
-    create_chat_cache
+    create_chat_cache,
+    get_banned_words
 )
 from database.model import (
     User,
@@ -24,7 +25,6 @@ from database.model import (
     Subscription,
     async_session
 )
-
 
 async def insert_user(user_id: int) -> User:
     """
@@ -268,7 +268,7 @@ async def update_user_preference(user_id, **kwargs):
         await update_user_cache(user_id, preference=preference)
 
 
-async def update_user_subscription(user_id, **kwargs):
+async def update_user_subscription(user_id, **kwargs) -> Subscription:
     """
     Update user
     :param user_id:
@@ -277,13 +277,38 @@ async def update_user_subscription(user_id, **kwargs):
     """
     async with lock_update:
         async with get_session() as session:
-            session.add(Subscription(user_id=user_id, **kwargs))
+            __subscription = Subscription(user_id=user_id, **kwargs)
+            session.add(__subscription)
             await session.commit()
         subscription: dict = await get_value(user_id, 'subscription')
         subscription['created_at'] = datetime.datetime.now()
         subscription.update(kwargs)
         await update_user_cache(user_id, subscription=subscription, is_premium=True)
     await update_user(user_id, is_premium=True, chat_count=0)
+    return __subscription
+
+async def add_user_subscription(user_id, subscription_id: str) -> Subscription:
+
+    if subscription_id == '1':
+        price = 100
+        _type = "weekly"
+        time_delta = datetime.datetime.now() + datetime.timedelta(days=7)
+
+    elif subscription_id == '2':
+        price = 250
+        _type = "monthly"
+        time_delta = datetime.datetime.now() + datetime.timedelta(days=30)
+
+    else:
+        price = 1000
+        _type = "yearly"
+        time_delta = datetime.datetime.now() + datetime.timedelta(days=365)
+
+    subscription = await update_user_subscription(user_id, type=_type, price_in_star=price, end_date=time_delta)
+
+    return subscription
+
+
 
 async def delete_user_subscription(user_id):
     """
@@ -291,32 +316,17 @@ async def delete_user_subscription(user_id):
     :param user_id:
     :return:
     """
+    await update_user(user_id, is_premium=False)
     async with lock_update:
         async with get_session() as session:
-            subs = await session.execute(select(Subscription).options(selectinload(Subscription.user))
+            result = await session.execute(select(Subscription).options(selectinload(Subscription.user))
                                   .where(Subscription.user_id == user_id)
                                   .limit(1))
-            await session.delete(subs)
+            subs   = result.scalar_one_or_none()
+            if subs:
+                await session.delete(subs)
+                await session.commit()
         await update_user_cache(user_id, subscription={})
-
-    await update_user(user_id, is_premium=False)
-    
-
-async def update_users_state():
-    """
-    Update all users states to State.NONE
-    :return:
-    """
-    CHUNK_SIZE = 100_000
-
-    async with get_session() as session:
-        # for offset in range(0, len(all_users), CHUNK_SIZE):
-        await session.execute(
-            update(User)
-            .values(current_state=State.NONE)
-        )
-        await session.commit()
-
 
 async def get_user(user_id: int) -> User | None:
     """
@@ -332,3 +342,16 @@ async def get_user(user_id: int) -> User | None:
             .limit(1)
         )
         return user.scalar_one_or_none()
+
+async def get_users_id() -> list[int]:
+    async with get_session() as session:
+        fetched = await session.execute(select(User.id))
+        scalars = fetched.scalars()
+        return scalars
+
+async def contains_banned_words(text):
+    sp_word = set(text.split())
+    banned  = await get_banned_words()
+    common  = list(sp_word & set(banned))
+
+    return len(common)!= 0
