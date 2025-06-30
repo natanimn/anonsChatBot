@@ -26,65 +26,68 @@ async def on_setting(_, call: CallbackQuery, state: State | None):
     user_id = call.from_user.id
 
     # await state.finish()
-
-    if data == 'gender':
-        gender = await get_value(user_id, 'gender')
-        await call.edit_message_text(
-            "**👤 Gender**\n\n"
-            f"__Your current gender__: {gender}",
-            reply_markup=keyboard.gender_k(gender)
-        )
-    elif data == 'age':
-        age = await get_value(user_id, 'age')
-        await call.edit_message_text(
-            f"**Your age**: {age}\n"
-            f"Enter your age",
-            reply_markup=keyboard.back()
-        )
-        await state.set_state(AgeState.age)
-        await state.set_data({'user_id': call.from_user.id})
-
-    elif data == 'country':
-        country = await get_value(user_id, 'country')
-        await call.edit_message_text(
-            "**🌍 Country**\n\n"
-            f"__Your current country is__: {country}",
-            reply_markup=keyboard.country_k(country)
-        )
-
-    elif data == 'preferences':
-        is_premium = await get_value(user_id, 'is_premium')
-        if not is_premium:
-            try:
-                await call.edit_message_text(
-                    "**☝️ Premium Subscription Required**\n\n"
-                    "❕__Subscribe to premium and customizes your preference:__\n\n"
-                    "Age\nGender\nCountry",
-                    reply_markup=keyboard.preferences_k(True)
-                )
-            except RPCError:
-                await premium.premium(_, call.message)
-
-        else:
-            preference = await get_value(user_id, 'preference')
+    try:
+        if data == 'gender':
+            gender = await get_value(user_id, 'gender')
             await call.edit_message_text(
-                "**ℹ️ Preferences**\n\n"
-                f"__Gender__: {preference.get('gender', "Both")}\n"
-                f"__Age range__: {preference.get('min_age', '')} - {preference.get('max_age', '')}\n"
-                f"__Countries__: {', '.join(preference.get('country', []))}",
-                reply_markup=keyboard.preferences_k()
-        )
-    else:
-        try:
-            await state.finish()
-        finally:
-            await call.edit_message_text(
-                f"**⚙️ Setting**\n\n"
-                f"✔️ __From this menu, you can customize your profile: gender, age and country.__\n\n"
-                f"**🔥 If you are premium user, you can also customize your preference.**\n"
-                f"(__this will increase the matching time__)",
-                reply_markup=keyboard.setting_k()
+                "**👤 Gender**\n\n"
+                f"__Your current gender__: {gender}",
+                reply_markup=keyboard.gender_k(gender)
             )
+        elif data == 'age':
+            age = await get_value(user_id, 'age')
+            await call.edit_message_text(
+                f"**Your age**: {age}\n"
+                f"Enter your age",
+                reply_markup=keyboard.back()
+            )
+            await state.set_state(AgeState.age)
+            await state.set_data({'user_id': call.from_user.id})
+
+        elif data == 'country':
+            country = await get_value(user_id, 'country')
+            await call.edit_message_text(
+                "**🌍 Country**\n\n"
+                f"__Your current country is__: {country}",
+                reply_markup=keyboard.country_k(country)
+            )
+
+        elif data == 'preferences':
+            is_premium = await get_value(user_id, 'is_premium')
+            if not is_premium:
+                try:
+                    await call.edit_message_text(
+                        "**☝️ Premium Subscription Required**\n\n"
+                        "❕__Subscribe to premium and customizes your preference:__\n\n"
+                        "Age\nGender\nCountry",
+                        reply_markup=keyboard.preferences_k(True)
+                    )
+                except RPCError:
+                    call.message.from_user.id = call.from_user.id
+                    await premium(_, call.message)
+
+            else:
+                preference = await get_value(user_id, 'preference')
+                await call.edit_message_text(
+                    "**ℹ️ Preferences**\n\n"
+                    f"__Gender__: {preference.get('gender', "Both")}\n"
+                    f"__Age range__: {preference.get('min_age', '')} - {preference.get('max_age', '')}\n"
+                    f"__Countries__: {', '.join(preference.get('country', []))}",
+                    reply_markup=keyboard.preferences_k()
+            )
+        else:
+            try:
+                await state.finish()
+            finally:
+                await call.edit_message_text(
+                    f"**⚙️ Setting**\n\n"
+                    f"✔️ __From this menu, you can customize your profile: gender, age and country.__\n\n"
+                    f"**🔥 If you are premium user, you can also customize your preference.**\n"
+                    f"(__this will increase the matching time__)",
+                    reply_markup=keyboard.setting_k()
+                )
+    except RPCError:
+        pass
 
 @app.on_callback_query(filters.create(check.gender))
 async def on_gender(_, call: CallbackQuery):
@@ -277,7 +280,7 @@ async def on_age_range(_, message: Message, state: State):
     if not is_premium:
         await message.reply('.', reply_markup=keyboard.main())
         await state.finish()
-        await premium.premium(_, message)
+        await premium(_, message)
         return
     try:
         assert len(ages)== 2

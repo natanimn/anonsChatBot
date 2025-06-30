@@ -17,6 +17,7 @@ from core import check
 from pyrogram.errors import BadRequest, FloodWait, RPCError
 from schedules.schedule import async_scheduler, unrestrict_user
 from core.state import State
+from core.util import get_user_statistics
 
 @app.on_message(filters.private & filters.create(check.admin) & filters.command('broadcast'))
 async def broadcast(bot: app, message: Message):
@@ -29,25 +30,40 @@ async def broadcast(bot: app, message: Message):
             "__Please reply to any message you want to broadcast__"
         )
     else:
-        await message.reply("**✅ Sending started..**")
+        start = datetime.now()
+        sent  = 0
+        failed = 0
         users_id = await get_users_id()
         sent_to  = 0
+        total = 0
         for user_id in users_id:
             if sent_to == 30:
                 await asyncio.sleep(1)
                 sent_to = 0
             try:
                 await bot.copy_message(user_id, admin_id, reply.id)
+                sent+=1
             except BadRequest:
-                continue
+                failed+=1
             except FloodWait as fw:
                 await asyncio.sleep(fw.value)
                 try:
                     await bot.copy_message(user_id, admin_id, reply.id)
+                    sent += 1
                 except RPCError:
-                    continue
+                    failed += 1
             finally:
                 sent_to += 1
+                total += 1
+
+        end = str(datetime.now() - start).split('.')[0]
+
+        await message.reply(
+            f"**Broadcast completed within {end}**\n\n"
+            f"**__Total users__**: __{total}__\n"
+            f"**Successfully sent**: __{sent}__\n"
+            f"**Failed**: __{failed}__"
+        )
 
 
 @app.on_message(filters.private & filters.create(check.admin) & filters.command('refund'))
@@ -222,6 +238,18 @@ async def unban(bot: app, message: Message):
                 await message.reply("**User has been unbanned successfully!**")
 
 
-
+@app.on_message(filters.private & filters.create(check.admin) & filters.command('stats'))
+async def stats(_, message: Message):
+    reply = await message.reply("__Processing ...__")
+    result = await get_user_statistics()
+    await reply.edit_text(
+        "**📊 Stats**\n\n"
+        f"**Total Users**: __{result['total_users']}__\n"
+        f"**Joined in 24hr**: __{result['users_joined_24h']}__\n"
+        f"**Joined in 1hr**: __{result['users_joined_1h']}__\n"
+        f"**Male**: __{result['male_users']}__\n"
+        f"**Female**: __{result['female_users']}__\n"
+        f"**Other**: __{result['other_users']}__"
+    )
 
 

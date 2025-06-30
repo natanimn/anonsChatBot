@@ -20,7 +20,8 @@ async def add_commands(bot: Client):
         BotCommand('setting', "Manage setting"),
         BotCommand('privacy', "Privacy and Policy"),
         BotCommand('help', "Get help"),
-        BotCommand('paysupport', "Payment support")
+        BotCommand('paysupport', "Payment support"),
+
     ])
 
 async def run_bot():
@@ -56,8 +57,8 @@ async def run_bot():
         print("BOT STARTED")
         await asyncio.Event().wait()
     finally:
-        await bot.stop()
         async_scheduler.shutdown()
+        await bot.stop()
 
 if __name__ == '__main__':
     asyncio.run(run_bot())

@@ -4,8 +4,7 @@ import json
 import os
 
 import time
-from sqlalchemy.future import select
-from sqlalchemy import update
+from sqlalchemy import update, func, select, text, case
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import selectinload
 from .events import get_event, lock_search, lock_update, get_user_lock
@@ -355,3 +354,44 @@ async def contains_banned_words(text):
     common  = list(sp_word & set(banned))
 
     return len(common)!= 0
+
+
+from sqlalchemy import func, select, and_
+from sqlalchemy.ext.asyncio import AsyncSession
+
+
+async def get_user_statistics():
+    now = datetime.datetime.now()
+    day_ago = now - datetime.timedelta(days=1)
+    hour_ago = now - datetime.timedelta(hours=1)
+    query = select(
+        func.count().label("total_users"),
+        func.sum(
+            case(
+                (User.created_at >= day_ago, 1),
+                else_=0
+            )
+        ).label("users_joined_24h"),
+        func.sum(
+            case(
+                (User.created_at >= hour_ago, 1),
+                else_=0
+            )
+        ).label("users_joined_1h"),
+        func.count().filter(User.gender == 'male').label("male_users"),
+        func.count().filter(User.gender == 'female').label("female_users"),
+        func.count().filter(User.gender.is_(None)).label("other_users")
+    )
+
+    async with get_session() as session:
+        result = await session.execute(query)
+        stats = result.one()
+
+        return {
+            "total_users": stats.total_users or 0,
+            "users_joined_24h": stats.users_joined_24h or 0,
+            "users_joined_1h": stats.users_joined_1h or 0,
+            "male_users": stats.male_users or 0,
+            "female_users": stats.female_users or 0,
+            "other_users": stats.other_users or 0
+        }
