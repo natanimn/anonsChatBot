@@ -96,13 +96,13 @@ def preference_gender_k(current_preference):
 
 def country_k(current_country):
     buttons = []
-    for i in range(0, len(COUNTRIES), 3):
+    for i in range(0, len(COUNTRIES), 2):
         buttons.append([
             InlineKeyboardButton(
                 f"☑️ {c}" if current_country == COUNTRIES[c] else c,
                 f"country:{COUNTRIES[c]}"
             )
-            for c in list(COUNTRIES.keys())[i: i+3]
+            for c in list(COUNTRIES.keys())[i: i+2]
         ])
 
     if current_country == 'india':

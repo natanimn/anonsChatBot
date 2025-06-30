@@ -1,6 +1,7 @@
 
 COUNTRIES = {
     "🇪🇹 Ethiopia": 'ethiopia',
+    "🇺🇸 America": 'america',
     "🇮🇩 Indonesia": 'indonesia',
     "🇮🇳 India": 'india',
     "🇷🇺 Russia": 'russia',
