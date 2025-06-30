@@ -33,7 +33,7 @@ async def run_bot():
         'anon_chat',
         api_id=Config.API_ID,
         api_hash=Config.API_HASH,
-        bot_token=Config.TEST_TOKEN,
+        bot_token=Config.TOKEN,
         plugins={
             'root': 'plugins'
         }
