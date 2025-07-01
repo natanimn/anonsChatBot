@@ -315,6 +315,7 @@ async def yes_no(bot: app, message: Message, **kwargs):
     state   = await get_value(user_id, 'current_state')
     request_from = await get_value(user_id, 'match_request_from')
     last_partner_id = await get_value(user_id, 'last_partner_id')
+    last_partner_state = await get_value(request_from, 'current_state')
 
     if state == State.CHATTING:
         await message.reply("**❗️You have already started a chat**")
@@ -330,8 +331,13 @@ async def yes_no(bot: app, message: Message, **kwargs):
                 "**❌ Sorry, the previous partner rejected your re-match request**"
             )
         finally:
-            await update_user(user_id, current_state=State.CHATTING, chatting_with=request_from)
+            if last_partner_state == State.SEARCHING_LAST_PARTNER:
+                await update_user(request_from, current_state=State.NONE)
             await update_user_cache(user_id, match_request_from=0)
+
+    elif last_partner_state == State.RESTRICTED:
+        await message.reply("**❗️️Unable to get the partner")
+        await update_user_cache(user_id, match_request_from=0)
 
     else:
         partner = await get_user_cache(request_from)
