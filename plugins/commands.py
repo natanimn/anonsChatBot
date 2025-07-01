@@ -220,30 +220,33 @@ async def re_chat(bot: app, message: Message, **kwargs):
             "❕__Subscribe to premium to use this feature__",
             reply_markup=keyboard.premium_k()
         )
-    elif user['current_state'] == State.RESTRICTED:
+    elif user['current_state'] in [State.RESTRICTED, State.CHATTING]:
         await chat(bot, message)
+
+    elif user['current_state'] == State.SEARCHING_LAST_PARTNER:
+        await message.reply(
+            "**❗️You have already requested to the partner**\n\n"
+            "__Please wait for their response__"
+        )
+
     else:
         last_partner_id = user['last_partner_id']
         try:
             assert last_partner_id != 0
             last_partner_state = await get_value(last_partner_id, 'current_state')
-            assert bool(last_partner_state | (State.CHATTING & State.RESTRICTED)) == True
-            assert user['current_state'] != State.SEARCHING_LAST_PARTNER
+            assert last_partner_state == State.NONE
+
         except AssertionError as e:
             if last_partner_id == 0:
                 await message.reply(
                     "**❌ Partner not found.**\n\n"
                     "__Start another /chat __"
                 )
-            elif user['current_state'] == State.SEARCHING_LAST_PARTNER:
-                await message.reply(
-                    "**❗️You have already requested to the partner**\n\n"
-                    "__Please wait for their response__"
-                )
+
             else:
                 await message.reply(
                     "**Sorry**,\n\n"
-                    "__Your previous partner started chat with another person. "
+                    "__Your previous partner has started chat with another person."
                     "Send /chat, and find another partner.__"
                 )
         else:
@@ -328,11 +331,11 @@ async def yes_no(bot: app, message: Message, **kwargs):
         try:
             await bot.send_message(
                 request_from,
-                "**❌ Sorry, the previous partner rejected your re-match request**"
+                "**❌ Sorry, the previous partner has rejected your re-match request**"
             )
         finally:
             if last_partner_state == State.SEARCHING_LAST_PARTNER:
-                await update_user(request_from, current_state=State.NONE)
+                await update_user(request_from, current_state=State.NONE, last_partner_id=0)
             await update_user_cache(user_id, match_request_from=0)
 
     elif last_partner_state == State.RESTRICTED:
@@ -375,7 +378,7 @@ async def yes_no(bot: app, message: Message, **kwargs):
                     )
                 except RPCError: pass
                 finally:
-                    await update_user(user_id, current_state=State.NONE)
+                    await update_user(user_id, current_state=State.NONE, last_partner_id=0)
                     await update_user(request_from, current_state=State.NONE)
             await update_user_cache(user_id, match_request_from=0)
 
