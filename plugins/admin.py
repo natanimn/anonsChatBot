@@ -103,7 +103,7 @@ async def refund(bot: app, message: Message):
             await message.reply("**✅ Star refunded successfully**")
 
 
-@app.on_message(filters.private & filters.create(check.admin) & filters.command('subscribe'))
+@app.on_message(filters.private & filters.create(check.admin) & filters.command('sub'))
 async def subscribe(bot: app, message: Message):
     args = message.text.split()
     if len(args) != 3:
@@ -166,7 +166,8 @@ async def subscribe(bot: app, message: Message):
 
                     else:
                         await message.reply(
-                            f"**✅ {subscription.type} has been added to {user_id} successfully**"
+                            f"**✅ {subscription.type.title()} premium subscription "
+                            f"has been added to {user_id} successfully**"
                         )
 
 @app.on_message(filters.private & filters.create(check.admin) & filters.command('addbword'))
@@ -251,5 +252,22 @@ async def stats(_, message: Message):
         f"**Female**: __{result['female_users']}__\n"
         f"**Other**: __{result['other_users']}__"
     )
+
+@app.on_message(filters.private & filters.create(check.admin) & filters.command('unsub'))
+async def unsubscribe(bot: app, message: Message):
+    user_id = message.text.split(":")[-1]
+    if user_id == message.text:
+        await message.reply("**ERROR**\n\n__This command only works as:\n /unsub user_id__")
+    else:
+        user = await get_user_cache(int(user_id))
+        if user is None:
+            await message.reply("**User not found**")
+        else:
+            if user['is_premium']:
+                await message.reply("**This user is not premium**")
+            else:
+                await delete_user_subscription(int(user_id))
+                async_scheduler.remove_job(f"subscription-{user_id}")
+                await message.reply("**User subscription has been removed successfully!**")
 
 

@@ -44,17 +44,6 @@ async def start(_, message: Message):
     )
 
 
-@app.on_message(filters.create(check.no_gender))
-async def no_gender_update(bot: app, message: Message):
-    user_id = message.from_user.id
-    gender  = await get_value(user_id, 'gender')
-    if not gender and not message.from_user.is_bot:
-        await bot.send_message(user_id,
-            "**🌼 Welcome again\n\n**"
-            "❕ __To continue, you have to select your gender first__",
-            reply_markup=keyboard.first_time_gender()
-        )
-
 @app.on_message(filters.private & filters.command('chat'))
 async def chat(bot: app, message: Message, **kwargs):
     user_id = message.from_user.id
@@ -331,10 +320,10 @@ async def yes_no(bot: app, message: Message, **kwargs):
         await message.reply("**❗️You have already started a chat**")
 
     elif request_from != last_partner_id or request_from == 0:
-        await message.reply("**❗️No previous partner found**")
+        await message.reply("**❗️No request found**")
 
     elif state == State.RESTRICTED:
-        await message.reply("❗**You can't do this now. You have been restricted**")
+        await message.reply("❗**You can't do this right now. You have been restricted**")
         try:
             await bot.send_message(
                 request_from,

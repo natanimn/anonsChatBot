@@ -138,7 +138,7 @@ async def on_update_age(_, message: Message, state: State):
         await update_user(message.from_user.id, age=int(message.text))
         await state.finish()
         await message.reply("✅ **Age updated**")
-        await setting.setting(_, message)
+        await setting(_, message)
 
 
 @app.on_callback_query(filters.create(check.india_region))
