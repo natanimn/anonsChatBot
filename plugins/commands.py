@@ -378,8 +378,8 @@ async def yes_no(bot: app, message: Message, **kwargs):
                     )
                 except RPCError: pass
                 finally:
-                    await update_user(user_id, current_state=State.NONE, last_partner_id=0)
-                    await update_user(request_from, current_state=State.NONE)
+                    await update_user(user_id, current_state=State.NONE)
+                    await update_user(request_from, current_state=State.NONE, last_partner_id=0)
             await update_user_cache(user_id, match_request_from=0)
 
 @app.on_message(filters.command('help'))
