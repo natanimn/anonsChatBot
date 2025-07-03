@@ -14,8 +14,6 @@ def main():
         [keyboards[3], keyboards[4]]
     ], resize_keyboard=True)
 
-def exit_k():
-    return ReplyKeyboardMarkup([["🔙 Exit"]], resize_keyboard=True)
 
 def premium_k():
     return InlineKeyboardMarkup([

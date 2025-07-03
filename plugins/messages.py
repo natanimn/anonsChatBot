@@ -9,7 +9,6 @@ from .commands import (
     help_,
     premium,
     re_chat,
-    exit_chat
 )
 from cache.cache import (
     get_value,
@@ -50,12 +49,6 @@ async def message_keyboad(_, message: Message):
             reply_markup=keyboard.support()
         )
 
-@app.on_message(
-    filters.private &
-    filters.create(lambda _, __, msg: msg.text == "🔙 Exit")
-)
-async def exit_chat_k(_, message: Message):
-    await exit_chat(_, message)
 
 @app.on_message(filters.private & filters.create(check.is_chatting))
 async def get_chat_message(bot: app, message: Message):
