@@ -168,7 +168,7 @@ async def on_indian_region(_, call: CallbackQuery):
                 await update_user(call.from_user.id, india_region=None)
             else:
                 await update_user(call.from_user.id, india_region=region)
-            call.data = 'indian_region:0'
+            call.data = 'india_region:0'
             await on_indian_region(_, call)
 
 
@@ -323,7 +323,7 @@ async def on_india_region_preference(_, call: CallbackQuery):
 
 
     preference = await get_value(user_id, 'preference')
-    regions: list = preference.get('indian_region', [])
+    regions: list = preference.get('india_region', [])
 
     if region in regions:
         regions.remove(regions)
