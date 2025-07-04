@@ -326,7 +326,7 @@ async def on_india_region_preference(_, call: CallbackQuery):
     regions: list = preference.get('india_region', [])
 
     if region in regions:
-        regions.remove(regions)
+        regions.remove(region)
     else:
         regions.append(region)
 
