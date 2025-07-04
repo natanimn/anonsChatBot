@@ -154,7 +154,7 @@ def india_regions_preference_k(selected_region):
         buttons.append([
             InlineKeyboardButton(
                 f"☑️ {c}" if INDIA_REGIONS[c] in selected_region else c,
-                f"pr_indian_region:{INDIA_REGIONS[c]}"
+                f"pr_india_region:{INDIA_REGIONS[c]}"
             )
             for c in list(INDIA_REGIONS.keys())[i: i + 3]
         ])

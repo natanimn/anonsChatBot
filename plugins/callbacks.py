@@ -210,7 +210,7 @@ async def on_preference(_, call: CallbackQuery, state: State | None):
             reply_markup=keyboard.preference_country_k(countries)
         )
 
-    elif data == 'indian_region':
+    elif data == 'india_region':
         regions = preference.get('indian_region', [])
         await call.edit_message_text(
             "**Indian region.\n\n"
