@@ -126,7 +126,7 @@ async def search_partner(user_id: int) -> User | None:
                                 ),
                                 and_(
                                     User.is_premium == True,
-                                    User.preference.has(Preference.india_region.any(user['indian_region'])),
+                                    User.preference.has(Preference.india_region.any(user['india_region'])),
                                     User.india_region.in_(regions)
                                 )
                             ))
