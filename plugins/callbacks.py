@@ -211,7 +211,7 @@ async def on_preference(_, call: CallbackQuery, state: State | None):
         )
 
     elif data == 'india_region':
-        regions = preference.get('indian_region', [])
+        regions = preference.get('india_region', [])
         await call.edit_message_text(
             "**Indian region.\n\n"
             f"**Preference:** {', '.join(regions)}__",
@@ -310,7 +310,7 @@ async def on_age_range(_, message: Message, state: State):
 
 
 @app.on_callback_query(filters.create(check.india_region_preference))
-async def on_i_region_preference(_, call: CallbackQuery):
+async def on_india_region_preference(_, call: CallbackQuery):
     region = call.data.split(":")[-1]
     user_id = call.from_user.id
     is_premium = await get_value(user_id, 'is_premium')
@@ -321,11 +321,6 @@ async def on_i_region_preference(_, call: CallbackQuery):
         await on_setting(_, call, None)
         return
 
-    if country != 'india':
-        await call.answer("This option is only available for Indian users", show_alert=True)
-        call.data = 'setting:preferences'
-        await on_setting(_, call, None)
-
 
     preference = await get_value(user_id, 'preference')
     regions: list = preference.get('indian_region', [])
@@ -335,8 +330,8 @@ async def on_i_region_preference(_, call: CallbackQuery):
     else:
         regions.append(region)
 
-    await update_user_preference(call.from_user.id, indian_region=regions)
-    call.data = 'preferences:indian_region'
+    await update_user_preference(call.from_user.id, india_region=regions)
+    call.data = 'preferences:india_region'
     await on_preference(_, call, None)
 
 
