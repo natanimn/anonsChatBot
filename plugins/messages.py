@@ -16,7 +16,7 @@ from cache.cache import (
     update_user_cache,
     get_chat_cache
 )
-from pyrogram.errors import BadRequest
+from pyrogram.errors import BadRequest, UserIsBlocked
 from core.util import close_chat, update_user
 from keyboards import keyboard
 from core.state import State
@@ -100,7 +100,7 @@ async def get_chat_message(bot: app, message: Message):
             else:
                 sent_message = await bot.copy_message(partner_id, user_id, message_id)
 
-        except BadRequest:
+        except (BadRequest, UserIsBlocked):
             await message.reply(
                 "**⚠ Error**\n\n"
                 "__Sorry, your partner blocked the bot, and chat is closed__",

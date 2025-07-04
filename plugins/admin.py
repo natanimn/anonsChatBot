@@ -14,7 +14,7 @@ from core.util import (
     update_user
 )
 from core import check
-from pyrogram.errors import BadRequest, FloodWait, RPCError
+from pyrogram.errors import BadRequest, FloodWait, RPCError, UserIsBlocked
 from schedules.schedule import async_scheduler, unrestrict_user
 from core.state import State
 from core.util import get_user_statistics
@@ -43,7 +43,7 @@ async def broadcast(bot: app, message: Message):
             try:
                 await bot.copy_message(user_id, admin_id, reply.id)
                 sent+=1
-            except BadRequest:
+            except (BadRequest, UserIsBlocked):
                 failed+=1
             except FloodWait as fw:
                 await asyncio.sleep(fw.value)
@@ -88,7 +88,7 @@ async def refund(bot: app, message: Message):
                     "and your premium subscription is stopped.__\n\n"
                     "**Thankyou for using this bot**"
                 )
-            except BadRequest:
+            except (BadRequest, UserIsBlocked):
                 pass
             finally:
                 await delete_user_subscription(int(user_id))
@@ -158,7 +158,7 @@ async def subscribe(bot: app, message: Message):
                             "__🔥 From now on, you can access to the bot's premium features.__\n\n"
                             "**Enjoy premium features**"
                         )
-                    except BadRequest:
+                    except (BadRequest, UserIsBlocked):
                         await message.reply(
                             "Cannot get the user and subscription is rolled back"
                         )
