@@ -85,10 +85,11 @@ async def chat(bot: app, message: Message, **kwargs):
             "🔎 __Searching for a partner__",
         )
         event = await create_event(user_id) # create an event first
-        man, matched_user = await search_partner(user_id)
-        user         = await get_user_cache(user_id)
+        task  = asyncio.create_task(search_partner(user_id))
+        matched_user = await task
 
         if event.is_set():
+            user = await get_user_cache(user_id)
             if not matched_user and user['current_state'] == State.SEARCHING:
                 await message.reply(
                     "😞 __Sorry, we could not get any partner for you, based on your current preference__\n\n"
@@ -126,7 +127,7 @@ async def chat(bot: app, message: Message, **kwargs):
                     await message.reply(
                         "**✅ Partner found**\n\n"
                         f"**🔢 Age**: {matched_user.age or ''}\n"
-                        f"**👥 Gender**: {matched_user.gender if user['is_premium'] else '||VIP||' }\n"
+                        f"**👥 Gender**: {matched_user.gender or "Unknown" if user['is_premium'] else '||Premium||' }\n"
                         f"**🌍 Country**: {partner_full_country}\n\n"
                         f"🚫 **Links are blocked**.\n"
                         f"__✔️ You can send media after 2 minutes__\n\n"
@@ -137,7 +138,7 @@ async def chat(bot: app, message: Message, **kwargs):
                         matched_user.id,
                         "**✅ Partner found**\n\n"
                         f"**🔢 Age**: {user['age'] or ''}\n"
-                        f"**👥 Gender**: {user['gender'] if matched_user.is_premium else '||VIP||'}\n"
+                        f"**👥 Gender**: {user['gender'] or "Unknown" if matched_user.is_premium else '||Premium||'}\n"
                         f"**🌍 Country**: {user_full_country}\n\n"
                         f"🚫 **Links are blocked**.\n"
                         f"__✔️ You can send media after 2 minutes__\n\n"
@@ -174,8 +175,8 @@ async def exit_chat(bot: app, message: Message, **kwargs):
             )
 
     elif state == State.SEARCHING:
-        await update_user(user_id, current_state=State.NONE)
         await message.reply("**🚫 Search exited**", reply_markup=keyboard.main())
+        await update_user(user_id, current_state=State.NONE)
     else:
         await message.reply("**There is not chat/search to exit**")
 
@@ -310,13 +311,12 @@ async def yes_no(bot: app, message: Message, **kwargs):
     user_id = message.from_user.id
     state   = await get_value(user_id, 'current_state')
     request_from = await get_value(user_id, 'match_request_from')
-    last_partner_id = await get_value(user_id, 'last_partner_id')
     last_partner_state = await get_value(request_from, 'current_state')
 
     if state == State.CHATTING:
         await message.reply("**❗️You have already started a chat**")
 
-    elif request_from != last_partner_id or request_from == 0:
+    elif request_from == 0:
         await message.reply("**❗️No request found**")
 
     elif state == State.RESTRICTED:
@@ -357,10 +357,11 @@ async def yes_no(bot: app, message: Message, **kwargs):
                     await update_user(request_from, current_state=State.NONE, chatting_with=user_id)
                 else:
                     await message.reply("**✅ Re matched**")
-                    await create_chat_cache(user_id, request_from)
-                    await update_user(user_id, current_state=State.CHATTING, chatting_with=request_from)
-                    await update_user(request_from, current_state=State.CHATTING, chatting_with=user_id)
-
+                    await asyncio.gather(
+                        create_chat_cache(user_id, request_from),
+                        update_user(user_id, current_state=State.CHATTING, chatting_with=request_from),
+                        update_user(request_from, current_state=State.CHATTING, chatting_with=user_id)
+                    )
             else:
                 await message.reply("**🚫 Partner blocked**")
                 try:
@@ -370,8 +371,10 @@ async def yes_no(bot: app, message: Message, **kwargs):
                     )
                 except RPCError: pass
                 finally:
-                    await update_user(user_id, current_state=State.NONE)
-                    await update_user(request_from, current_state=State.NONE, last_partner_id=0)
+                    await asyncio.gather(
+                        update_user(user_id, current_state=State.NONE),
+                        update_user(request_from, current_state=State.NONE, last_partner_id=0)
+                    )
             await update_user_cache(user_id, match_request_from=0)
 
 @app.on_message(filters.command('help'))

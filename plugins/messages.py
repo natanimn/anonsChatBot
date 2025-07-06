@@ -59,17 +59,13 @@ async def get_chat_message(bot: app, message: Message):
     partner_status = await get_value(partner_id, 'current_state')
 
     if user_status == State.RESTRICTED or partner_status == State.RESTRICTED:
-        print("CHAT closed")
         await close_chat(user_id, partner_id)
-        if user_status == State.RESTRICTED:
-            await update_user(user_id, current_state=State.RESTRICTED)
-        else:
-            await update_user(partner_id, current_state=State.RESTRICTED)
-        await message.reply("**Chat closed**", reply_markup=keyboard.main())
         try:
             await bot.send_message(partner_id, "**Chat closed**", reply_markup=keyboard.main())
-        except:
-            pass
+        finally:
+            await message.reply("**Chat closed**", reply_markup=keyboard.main())
+            return None
+
     elif message.entities or message.caption_entities:
         return await message.reply("📵 **Sending any link is not allowed**")
 
@@ -78,7 +74,6 @@ async def get_chat_message(bot: app, message: Message):
 
         if await contains_banned_words(text):
             return None
-
         try:
             history = await get_chat_cache(user_id, partner_id)
             if message.media:

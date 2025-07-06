@@ -255,7 +255,7 @@ async def stats(_, message: Message):
 
 @app.on_message(filters.private & filters.create(check.admin) & filters.command('unsub'))
 async def unsubscribe(bot: app, message: Message):
-    user_id = message.text.split(":")[-1]
+    user_id = message.text.split()[-1]
     if user_id == message.text:
         await message.reply("**ERROR**\n\n__This command only works as:\n /unsub user_id__")
     else:
@@ -263,7 +263,7 @@ async def unsubscribe(bot: app, message: Message):
         if user is None:
             await message.reply("**User not found**")
         else:
-            if user['is_premium']:
+            if not user['is_premium']:
                 await message.reply("**This user is not premium**")
             else:
                 await delete_user_subscription(int(user_id))

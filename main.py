@@ -51,7 +51,10 @@ async def run_bot():
         add_unsubscription(),
         reset_users_cache()
     )
+    async_scheduler.start()
     await bot.start()
+
+    print(bot.me.full_name)
     await add_commands(bot)
     try:
         print("BOT STARTED")

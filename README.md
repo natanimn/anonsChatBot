@@ -18,9 +18,9 @@ psql
 ```sql
 ALTER USER postgres WITH PASSWORD 'admin';
 ```
-__Create a database "anonChat"__
+__Create a database "a2z"__
 ```sql
-CREATE DATABASE "anonChat";
+CREATE DATABASE "a2z";
 ```
 __Exit the database__
 ```commandline
@@ -74,7 +74,7 @@ class Config:
     API_HASH = ""
     TOKEN = ""
     TEST_TOKEN = ""
-    DATABASE_URI = "postgresql+asyncpg://postgres:admin@localhost/anonChat"
+    DATABASE_URI = "postgresql+asyncpg://postgres:admin@localhost/a2z"
     REPORT_CHANNEL_ID: int = -1000000000 # Channel ID of where reports are go
     DAILY_CHAT_LIMIT = 20
     ADMIN_ID: int = 00000 # Admin/Owner ID

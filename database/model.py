@@ -59,7 +59,7 @@ class Subscription(Base):
     uuid          = mapped_column(Uuid(as_uuid=False), default=uuid.uuid4)
     type          = mapped_column(String(10), nullable=False)
     price_in_star = mapped_column(Integer)
-    user_id       = mapped_column(BigInteger, ForeignKey('users.id'))
+    user_id       = mapped_column(BigInteger, ForeignKey('users.id', ondelete="CASCADE"))
     user          = relationship("User", back_populates="subscription", uselist=False)
     end_date      = mapped_column(DateTime)
     created_at    = mapped_column(DateTime, default=datetime.datetime.now())
@@ -71,12 +71,12 @@ class Preference(Base):
     id            = mapped_column(Integer, primary_key=True)
     uuid          = mapped_column(Uuid(as_uuid=False), default=uuid.uuid4)
     gender        = mapped_column(String(10))
-    user_id       = mapped_column(BigInteger, ForeignKey('users.id'), unique=True)
+    user_id       = mapped_column(BigInteger, ForeignKey('users.id', ondelete="CASCADE"), unique=True)
     user          = relationship("User", back_populates="preference")
     min_age       = mapped_column(Integer)
     max_age       = mapped_column(Integer)
-    country       = mapped_column(ARRAY(String))
-    india_region  = mapped_column(ARRAY(String))
+    country       = mapped_column(ARRAY(String), default=[])
+    india_region  = mapped_column(ARRAY(String), default=[])
 
 
 @asynccontextmanager

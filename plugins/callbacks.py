@@ -21,12 +21,12 @@ class AgeState(StatesGroup):
 
 @app.on_callback_query(filters.create(check.setting))
 async def on_setting(_, call: CallbackQuery, state: State | None):
-    await call.answer()
     data = call.data.split(":")[-1]
     user_id = call.from_user.id
 
     # await state.finish()
     try:
+        await call.answer()
         if data == 'gender':
             gender = await get_value(user_id, 'gender')
             await call.edit_message_text(
@@ -70,9 +70,11 @@ async def on_setting(_, call: CallbackQuery, state: State | None):
                 preference = await get_value(user_id, 'preference')
                 await call.edit_message_text(
                     "**ℹ️ Preferences**\n\n"
-                    f"__Gender__: {preference.get('gender', "Both")}\n"
-                    f"__Age range__: {preference.get('min_age', '')} - {preference.get('max_age', '')}\n"
-                    f"__Countries__: {', '.join(preference.get('country', []))}",
+                    "__From this menu you can customize your preferences, your current preference:__\n\n"
+                    f"__Gender__: {preference.get('gender') or "Both"}\n"
+                    f"__Age range__: {preference.get('min_age') or ''} - {preference.get('max_age') or ''}\n"
+                    f"__Countries__: {', '.join(preference.get('country', []))}\n\n"
+                    f"(__this will increase the matching time__)",
                     reply_markup=keyboard.preferences_k()
             )
         else:
@@ -186,7 +188,7 @@ async def on_preference(_, call: CallbackQuery, state: State | None):
 
     preference = await get_value(user_id, 'preference')
     if data == 'gender':
-        gender = preference.get('gender', 'Both')
+        gender = preference.get('gender') or "Both"
         await call.edit_message_text(
             "**👤 Gender**\n\n"
             f"__Preference__: {gender}",
@@ -302,9 +304,11 @@ async def on_age_range(_, message: Message, state: State):
         preference = await get_value(message.from_user.id, 'preference')
         await message.reply(
             "**ℹ️ Preferences**\n\n"
-            f"__Gender__: {preference.get('gender', '')}\n"
-            f"__Age range__: {preference.get('min_age', '')} - {preference.get('max_age', '')}\n"
-            f"__Countries__: {', '.join(preference.get('country', []))}",
+            "__From this menu you can customize your preferences, your current preference:__\n\n"
+            f"__Gender__: {preference.get('gender') or "Both"}\n"
+            f"__Age range__: {preference.get('min_age') or ''} - {preference.get('max_age') or ''}\n"
+            f"__Countries__: {', '.join(preference.get('country'))}\n\n"
+            f"(__this will increase the matching time__)",
             reply_markup=keyboard.preferences_k()
         )
 
@@ -325,7 +329,11 @@ async def on_india_region_preference(_, call: CallbackQuery):
     preference = await get_value(user_id, 'preference')
     regions: list = preference.get('india_region', [])
 
-    if region in regions:
+    if not 'india' in preference.get('country'):
+        await call.answer("To use this feature, you must include India in your preference countries", show_alert=True)
+        regions = []
+
+    elif region in regions:
         regions.remove(region)
     else:
         regions.append(region)
@@ -364,7 +372,6 @@ async def subscribe_premium(bot: app, call: CallbackQuery):
         "XTR",
         prices=[labeled_price]
     )
-
 
 
 @app.on_callback_query(filters.create(check.first))

@@ -55,6 +55,7 @@ async def search_partner(user_id: int) -> User | None:
         while not event.is_set() and time.time() < start + timeout and user['current_state'] == State.SEARCHING:
             async with lock_search:
                 user = await get_user_cache(user_id)
+                preference = user['preference']
                 if user['current_state'] != State.SEARCHING:
                     break
 
@@ -64,90 +65,101 @@ async def search_partner(user_id: int) -> User | None:
                     User.last_partner_id != user_id,
                     User.id != user['last_partner_id']
                 ]
+
                 if user['is_premium']:
-                    if preference:=user['preference']:
-                        if countries:=preference.get('country', []): # country based filtering
-                            filters.append(or_(
+                    if countries := preference.get('country'):
+                        filters.append(User.country.in_(countries))
+                    if min_age := preference.get('min_age'):
+                        filters.append(User.age >= int(min_age))
+                    if max_age := preference.get('max_age'):
+                        filters.append(User.age <= int(max_age))
+                    if gender := preference.get('gender'):
+                       filters.append(User.gender == gender)
+                    if 'india' in preference.get('country') and preference.get('india_region'):
+                        regions = preference.get('india_region')
+                        filters.append(
+                            or_(
                                 and_(
-                                    User.country.in_(countries),
-                                    User.is_premium == False
-                                ),
-                                and_(
-                                    User.is_premium == True,
-                                    User.preference.has(Preference.country.any(user['country'])),
-                                    User.country.in_(countries),
-                                )
-                            ))
-
-                        if min_age:=preference.get('min_age'):# and preference.max_age:
-                            filters.append(or_(
-                                and_(
-                                    User.age >= min_age,
-                                    User.is_premium == False
-                                ),
-                                and_(
-                                    User.is_premium == True,
-                                    User.preference.has(Preference.min_age <= int(user['age']))),
-                                    User.age >= int(min_age),
-                            ))
-
-                        if max_age:=preference.get('max_age'):
-                            filters.append(or_(
-                                and_(
-                                    User.age <= max_age,
-                                    User.is_premium == False
-                                ),
-                                and_(
-                                    User.is_premium == True,
-                                    User.preference.has(Preference.max_age >= int(user['age']))),
-                                    User.age <= int(max_age),
-
-                            ))
-
-                        if gender:=preference.get('gender'):
-                            filters.append(or_(
-                                and_(
-                                    User.gender == gender,
-                                    User.is_premium == False
-                                ),
-                                and_(
-                                    User.is_premium == True,
-                                    User.preference.has(Preference.gender == user['gender']),
-                                    User.gender == gender
-                                )
-                            ))
-
-                        if user['country'] == 'india' and preference.get('india_region'):
-                            regions = preference.get('india_region')
-                            filters.append(or_(
-                                and_(
-                                    User.india_region.in_(regions),
-                                    User.is_premium == False
-                                ),
-                                and_(
-                                    User.is_premium == True,
-                                    User.preference.has(Preference.india_region.any(user['india_region'])),
+                                    User.country == "india",
                                     User.india_region.in_(regions)
+                                ),
+                                User.india_region.is_(None)
+                            )
+                        )
+
+                filters.append(
+                    or_(
+                        User.is_premium == False,
+                        and_(
+                            User.is_premium == True,
+                            or_(
+                                ~User.preference.has(),
+                                and_(
+                                    User.preference.has(
+                                        or_(
+                                            Preference.gender == user['gender'],
+                                            Preference.gender.is_(None)
+                                        )
+                                    ),
+                                    User.preference.has(
+                                        or_(
+                                            Preference.min_age >= int(user['age']),
+                                            Preference.min_age.is_(None)
+                                        )
+                                    ),
+                                    User.preference.has(
+                                        or_(
+                                            Preference.max_age <= int(user['age']),
+                                            Preference.max_age.is_(None)
+                                        )
+                                    ),
+                                    User.preference.has(
+                                        or_(
+                                            Preference.country.any(user['country']),
+                                            func.cardinality(Preference.country) == 0
+                                        )
+                                    ),
+                                    User.preference.has(
+                                        or_(
+                                            Preference.india_region.any(user['india_region']),
+                                            func.cardinality(Preference.india_region) == 0
+                                        )
+                                    )
                                 )
-                            ))
-                else:
-                    filters.append(User.is_premium == False)
+                            )
+                        )
+                    )
+                )
 
                 matched = await session.execute(
                     select(User)
-                    .where(and_(*filters)).limit(1)
+                    .where(and_(*filters))
+                    .limit(1)
                     .options(selectinload(User.preference), selectinload(User.subscription))
                     .with_for_update(skip_locked=True)
                 )
                 matched_scalar = matched.scalar_one_or_none()
 
-                if matched_scalar and \
-                matched_scalar.current_state == State.SEARCHING and \
-                user['current_state'] == State.SEARCHING:
+                if (
+                        matched_scalar and
+                        matched_scalar.current_state == State.SEARCHING and
+                        user['current_state'] == State.SEARCHING
+                ):
                     try:
                         partner_id = matched_scalar.id
                         m_event = await get_event(partner_id)
                         if not m_event:
+                            await session.execute(
+                                update(User)
+                                .where(User.id == partner_id)
+                                .values(current_state=State.NONE)
+                            )
+                            await session.commit()
+                            matched_scalar = None
+                            continue
+
+                        elif m_event.is_set():
+                            matched_scalar = None
                             continue
 
                         if not user['is_premium']:
@@ -182,12 +194,17 @@ async def search_partner(user_id: int) -> User | None:
                             .where(User.id == partner_id)
                             .values(**partner_kwargs)
                         )
+
                         await session.commit()
                         await create_chat_cache(user_id, partner_id)
-                        await update_user_cache(user_id, **user_kwargs)
-                        await update_user_cache(partner_id, **partner_kwargs)
-                        await update_user_cache(user_id, match_request_from=0)
-                        await update_user_cache(partner_id, match_request_from=0)
+                        await asyncio.gather(
+                            update_user_cache(user_id, **user_kwargs),
+                            update_user_cache(partner_id, **partner_kwargs)
+                        )
+                        await asyncio.gather(
+                            update_user_cache(user_id, match_request_from=0),
+                            update_user_cache(partner_id, match_request_from=0)
+                        )
 
                         m_event.set()
                     except Exception as e:
@@ -201,7 +218,7 @@ async def search_partner(user_id: int) -> User | None:
         if not event.is_set():
             event.set()
 
-        return user, matched_scalar
+        return matched_scalar
 
 
 async def close_chat(user_id, partner_id):
@@ -211,9 +228,11 @@ async def close_chat(user_id, partner_id):
     :param partner_id:
     :return:
     """
-    await update_user(int(partner_id), chatting_with=0, current_state=State.NONE, last_partner_id=user_id)
-    await update_user(user_id, chatting_with=0, current_state=State.NONE, last_partner_id=int(partner_id))
-    await delete_chat_history(user_id, partner_id)
+    await asyncio.gather(
+        update_user(int(partner_id), chatting_with=0, current_state=State.NONE, last_partner_id=user_id),
+        update_user(user_id, chatting_with=0, current_state=State.NONE, last_partner_id=int(partner_id)),
+        delete_chat_history(user_id, partner_id)
+    )
 
 async def update_user(user_id, **kwargs):
     """
@@ -318,9 +337,12 @@ async def delete_user_subscription(user_id):
     await update_user(user_id, is_premium=False)
     async with lock_update:
         async with get_session() as session:
-            result = await session.execute(select(Subscription).options(selectinload(Subscription.user))
-                                  .where(Subscription.user_id == user_id)
-                                  .limit(1))
+            result = await session.execute(
+                select(Subscription)
+                .options(selectinload(Subscription.user))
+                .where(Subscription.user_id == user_id)
+                .limit(1)
+            )
             subs   = result.scalar_one_or_none()
             if subs:
                 await session.delete(subs)
@@ -354,11 +376,6 @@ async def contains_banned_words(text):
     common  = list(sp_word & set(banned))
 
     return len(common)!= 0
-
-
-from sqlalchemy import func, select, and_
-from sqlalchemy.ext.asyncio import AsyncSession
-
 
 async def get_user_statistics():
     now = datetime.datetime.now()
