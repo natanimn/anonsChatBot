@@ -7,6 +7,7 @@ from schedules.schedule import async_scheduler
 from core import check
 from database.model import User, get_session
 from config import Config
+from core import safe
 
 @app.on_pre_checkout_query()
 async def on_pre_checkout_query(_, query: PreCheckoutQuery):
@@ -24,11 +25,11 @@ async def on_pre_checkout_query(_, query: PreCheckoutQuery):
         await query.answer(True)
 
 @app.on_message(filters.successful_payment)
+@safe
 async def on_successful_payment(bot: app, message: Message):
     user_id = message.from_user.id
     payment = message.successful_payment
     charge_id = payment.telegram_payment_charge_id
-    print(payment.invoice_payload)
     try:
         subscription = await add_user_subscription(user_id, payment.invoice_payload)
         async_scheduler.add_job(
@@ -38,8 +39,7 @@ async def on_successful_payment(bot: app, message: Message):
             run_date=subscription.end_date,
             args=(user_id,)
         )
-    except Exception as e:
-        print(e)
+    except Exception:
         await message.reply(
             "**❌ Something went wrong with subscription**\n\n"
             "✔️ __Your money will be refunded__"
@@ -52,17 +52,14 @@ async def on_successful_payment(bot: app, message: Message):
             "__🔥 From now on, you can access to the bot's premium features.__\n\n"
             "**Enjoy premium features**"
         )
-        try:
-            await bot.send_message(
-                Config.PREMIUM_CHANNEL_ID,
-                "**🔥 New Premium Subscription Added**\n\n"
-                f"**By**: {message.from_user.mention}\n"
-                f"**User ID**: <code>{message.from_user.id}</code>\n"
-                f"**Subscription Type**: __{subscription.type}__\n"
-                f"**Telegram charge id**: <code>{payment.telegram_payment_charge_id}</code>"
-            )
-        except:
-            pass
+        await bot.send_message(
+            Config.PREMIUM_CHANNEL_ID,
+            "**🔥 New Premium Subscription Added**\n\n"
+            f"**By**: {message.from_user.mention}\n"
+            f"**User ID**: <code>{message.from_user.id}</code>\n"
+            f"**Subscription Type**: __{subscription.type}__\n"
+            f"**Telegram charge id**: <code>{payment.telegram_payment_charge_id}</code>"
+        )
 
 
 

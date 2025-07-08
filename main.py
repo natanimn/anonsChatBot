@@ -7,6 +7,16 @@ from pyrogram_patch.fsm.storages import MemoryStorage
 from pyrogram_patch.patch import patch
 from pyrogram.types import BotCommand
 from cache.cache import reset_users_cache
+import logging
+
+logging.basicConfig(
+    level=logging.ERROR,
+    format='[%(asctime)s] [%(levelname)s] %(message)s',
+    handlers=[
+        logging.FileHandler("a2zdatingbot.log"),
+        logging.StreamHandler()
+    ]
+)
 
 async def add_commands(bot: Client):
     await bot.set_bot_commands([
@@ -37,7 +47,8 @@ async def run_bot():
         bot_token=Config.TOKEN,
         plugins={
             'root': 'plugins'
-        }
+        },
+        skip_updates=False
     )
 
     patch_manager = patch(bot)
@@ -54,7 +65,6 @@ async def run_bot():
     async_scheduler.start()
     await bot.start()
 
-    print(bot.me.full_name)
     await add_commands(bot)
     try:
         print("BOT STARTED")

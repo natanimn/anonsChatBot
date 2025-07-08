@@ -48,25 +48,10 @@ def preferences_k(locked=False):
         [InlineKeyboardButton("🔙 Back", 'setting:back')]
     ])
 
-def first_time_gender(current=None):
-    male = "Male ☑️" if current == 'male' else "Male"
-    female = "Female ☑️" if current == 'female' else "Female"
-    btn = []
-    if current:
-        btn.append(InlineKeyboardButton("🔜 Next", 'first:next'))
-
-    return InlineKeyboardMarkup([[
-            InlineKeyboardButton(male, 'first:male'),
-            InlineKeyboardButton(female, 'first:female'),
-        ],
-        btn
-    ])
-
-
 def gender_k(current_gender):
 
-    male = "Male ☑️" if current_gender == 'male' else "Male"
-    female = "Female ☑️" if current_gender == 'female' else "Female"
+    male = "🚹 Male ☑️" if current_gender == 'male' else "🚹 Male"
+    female = "🚺 Female ☑️" if current_gender == 'female' else "🚺 Female"
 
     return InlineKeyboardMarkup([
         [
@@ -77,8 +62,8 @@ def gender_k(current_gender):
     ])
 
 def preference_gender_k(current_preference):
-    male = "Male ☑️" if current_preference == 'male' else "Male"
-    female = "Female ☑️" if current_preference == 'female' else "Female"
+    male = "🚹 Male ☑️" if current_preference == 'male' else "🚹 Male"
+    female = "🚺 Female ☑️" if current_preference == 'female' else "🚺 Female"
     none = "Both ☑️" if current_preference is None or current_preference == "Both" else "Both"
 
     return InlineKeyboardMarkup([
@@ -194,3 +179,23 @@ def help_k():
         [InlineKeyboardButton("⁉️ Support", url='https://t.me/aioadminsbot')],
         [InlineKeyboardButton("📢 Update channel", url='https://t.me/AutoAcceptor')]
     ])
+
+
+def first_time_gender():
+    return InlineKeyboardMarkup([[
+            InlineKeyboardButton("🚹 Male " , 'first_gender:male'),
+            InlineKeyboardButton( "🚺 Female" , 'first_gender:female'),
+        ]
+    ])
+
+
+def first_time_country():
+    buttons = []
+    for i in range(0, len(COUNTRIES), 2):
+        buttons.append([
+            InlineKeyboardButton(c,
+                f"first_country:{COUNTRIES[c]}"
+            )
+            for c in list(COUNTRIES.keys())[i: i+2]
+        ])
+    return InlineKeyboardMarkup(buttons)

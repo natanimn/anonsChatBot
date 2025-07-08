@@ -17,12 +17,10 @@ async def create_event(user_id: int) -> asyncio.Event:
     :param user_id:
     :return:
     """
-    if user_id in user_search_events:
-        return await get_event(user_id)
-    else:
-        event = asyncio.Event()
-        user_search_events[user_id] = event
-        return event
+    event = asyncio.Event()
+    user_search_events[user_id] = event
+    return event
+
 
 async def get_event(user_id: int) -> asyncio.Event | None:
     """
@@ -43,8 +41,3 @@ async def delete_event(user_id: int):
     """
     if user_id in user_search_events:
         del user_search_events[user_id]
-
-async def init_event():
-    """
-    :return:
-    """

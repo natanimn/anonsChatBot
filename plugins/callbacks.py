@@ -13,108 +13,106 @@ from pyrogram_patch.fsm.filter import StateFilter
 from pyrogram.types import LabeledPrice
 import uuid
 from .commands import premium, start, setting
-
+from core import safe, safe_c
 
 class AgeState(StatesGroup):
     age = StateItem()
     age_range = StateItem()
 
 @app.on_callback_query(filters.create(check.setting))
+@safe_c
 async def on_setting(_, call: CallbackQuery, state: State | None):
     data = call.data.split(":")[-1]
     user_id = call.from_user.id
 
-    # await state.finish()
-    try:
-        await call.answer()
-        if data == 'gender':
-            gender = await get_value(user_id, 'gender')
-            await call.edit_message_text(
-                "**👤 Gender**\n\n"
-                f"__Your current gender__: {gender}",
-                reply_markup=keyboard.gender_k(gender)
-            )
-        elif data == 'age':
-            age = await get_value(user_id, 'age')
-            await call.edit_message_text(
-                f"**Your age**: {age}\n"
-                f"Enter your age",
-                reply_markup=keyboard.back()
-            )
-            await state.set_state(AgeState.age)
-            await state.set_data({'user_id': call.from_user.id})
+    await call.answer()
+    if data == 'gender':
+        gender = await get_value(user_id, 'gender')
+        await call.edit_message_text(
+            "**👤 Gender**\n\n"
+            f"__Your current gender__: {gender}",
+            reply_markup=keyboard.gender_k(gender)
+        )
+    elif data == 'age':
+        age = await get_value(user_id, 'age')
+        await call.edit_message_text(
+            f"**Your age**: {age}\n"
+            f"Enter your age",
+            reply_markup=keyboard.back()
+        )
+        await state.set_state(AgeState.age)
+        await state.set_data({'user_id': call.from_user.id})
 
-        elif data == 'country':
-            country = await get_value(user_id, 'country')
-            await call.edit_message_text(
-                "**🌍 Country**\n\n"
-                f"__Your current country is__: {country}",
-                reply_markup=keyboard.country_k(country)
-            )
+    elif data == 'country':
+        country = await get_value(user_id, 'country')
+        await call.edit_message_text(
+            "**🌍 Country**\n\n"
+            f"__Your current country is__: {country}",
+            reply_markup=keyboard.country_k(country)
+        )
 
-        elif data == 'preferences':
-            is_premium = await get_value(user_id, 'is_premium')
-            if not is_premium:
-                try:
-                    await call.edit_message_text(
-                        "**☝️ Premium Subscription Required**\n\n"
-                        "❕__Subscribe to premium and customizes your preference:__\n\n"
-                        "Age\nGender\nCountry",
-                        reply_markup=keyboard.preferences_k(True)
-                    )
-                except RPCError:
-                    call.message.from_user.id = call.from_user.id
-                    await premium(_, call.message)
-
-            else:
-                preference = await get_value(user_id, 'preference')
-                await call.edit_message_text(
-                    "**ℹ️ Preferences**\n\n"
-                    "__From this menu you can customize your preferences, your current preference:__\n\n"
-                    f"__Gender__: {preference.get('gender') or "Both"}\n"
-                    f"__Age range__: {preference.get('min_age') or ''} - {preference.get('max_age') or ''}\n"
-                    f"__Countries__: {', '.join(preference.get('country', []))}\n\n"
-                    f"(__this will increase the matching time__)",
-                    reply_markup=keyboard.preferences_k()
-            )
-        else:
+    elif data == 'preferences':
+        is_premium = await get_value(user_id, 'is_premium')
+        if not is_premium:
             try:
-                await state.finish()
-            finally:
                 await call.edit_message_text(
-                    f"**⚙️ Setting**\n\n"
-                    f"✔️ __From this menu, you can customize your profile: gender, age and country.__\n\n"
-                    f"**🔥 If you are premium user, you can also customize your preference.**\n"
-                    f"(__this will increase the matching time__)",
-                    reply_markup=keyboard.setting_k()
+                    "**☝️ Premium Subscription Required**\n\n"
+                    "❕__Subscribe to premium and customizes your preference:__\n\n"
+                    "Age\nGender\nCountry",
+                    reply_markup=keyboard.preferences_k(True)
                 )
-    except RPCError:
-        pass
+            except RPCError:
+                call.message.from_user.id = call.from_user.id
+                await premium(_, call.message)
+
+        else:
+            preference = await get_value(user_id, 'preference')
+            await call.edit_message_text(
+                "**ℹ️ Preferences**\n\n"
+                "__From this menu you can customize your preferences, your current preference:__\n\n"
+                f"__Gender__: {preference.get('gender') or "Both"}\n"
+                f"__Age range__: {preference.get('min_age') or ''} - {preference.get('max_age') or ''}\n"
+                f"__Countries__: {', '.join(preference.get('country', []))}\n\n"
+                f"(__this will increase the matching time__)",
+                reply_markup=keyboard.preferences_k()
+        )
+    else:
+        try:
+            await state.finish()
+        finally:
+            await call.edit_message_text(
+                f"**⚙️ Setting**\n\n"
+                f"✔️ __From this menu, you can customize your profile: gender, age and country.__\n\n",
+                reply_markup=keyboard.setting_k()
+            )
 
 @app.on_callback_query(filters.create(check.gender))
+@safe
 async def on_gender(_, call: CallbackQuery):
     gender = call.data.split(":")[-1]
-    if gender == 'none':
-        await update_user(call.from_user.id, gender=None)
-    else:
+    current_gender = await get_value(call.from_user.id, 'gender')
+    if gender != current_gender:
         await update_user(call.from_user.id, gender=gender)
-
-    call.data = 'setting:gender'
-    await on_setting(_, call, None)
+        call.data = 'setting:gender'
+        await on_setting(_, call, None)
+    else:
+        await call.answer()
 
 
 @app.on_callback_query(filters.create(check.country))
+@safe
 async def on_country(_, call: CallbackQuery):
     country = call.data.split(":")[-1]
     user_id = call.from_user.id
     user_country = await get_value(user_id, 'country')
     user_region  = await get_value(user_id, 'india_region')
 
-    if country == user_country:
-        await update_user(call.from_user.id, country=None, india_region=None)
-    else:
+    if country != user_country:
         if country != 'india':
             await update_user(call.from_user.id, country=country, india_region=None)
+            call.data = 'setting:country'
+            await on_setting(_, call, None)
+
         else:
             await update_user(call.from_user.id, country=country)
             await call.edit_message_text(
@@ -122,13 +120,11 @@ async def on_country(_, call: CallbackQuery):
                 "__It helps you connect simply with other indian, from similar region__",
                 reply_markup=keyboard.india_regions_k(user_region)
             )
-            return
-
-    call.data = 'setting:country'
-    await on_setting(_, call, None)
-
+    else:
+        await call.answer()
 
 @app.on_message(filters.text & filters.create(StateFilter(AgeState.age)))
+@safe_c
 async def on_update_age(_, message: Message, state: State):
     if not message.text.isdigit():
         await message.reply(
@@ -144,6 +140,7 @@ async def on_update_age(_, message: Message, state: State):
 
 
 @app.on_callback_query(filters.create(check.india_region))
+@safe
 async def on_indian_region(_, call: CallbackQuery):
     region = call.data.split(":")[-1]
     user_id = call.from_user.id
@@ -164,7 +161,6 @@ async def on_indian_region(_, call: CallbackQuery):
                 f"**Your region:** __{user_region.title()}__",
                 reply_markup=keyboard.india_regions_k(user_region)
             )
-
         else:
             if region == user_region:
                 await update_user(call.from_user.id, india_region=None)
@@ -175,6 +171,7 @@ async def on_indian_region(_, call: CallbackQuery):
 
 
 @app.on_callback_query(filters.create(check.preference))
+@safe_c
 async def on_preference(_, call: CallbackQuery, state: State | None):
     await call.answer()
     data = call.data.split(":")[-1]
@@ -229,6 +226,7 @@ async def on_preference(_, call: CallbackQuery, state: State | None):
 
 
 @app.on_callback_query(filters.create(check.gender_preference))
+@safe
 async def on_gender_preference(_, call: CallbackQuery):
     gender = call.data.split(":")[-1]
     user_id = call.from_user.id
@@ -249,6 +247,7 @@ async def on_gender_preference(_, call: CallbackQuery):
 
 
 @app.on_callback_query(filters.create(check.country_preference))
+@safe
 async def on_country_preference(_, call: CallbackQuery):
     country = call.data.split(":")[-1]
     user_id = call.from_user.id
@@ -273,6 +272,7 @@ async def on_country_preference(_, call: CallbackQuery):
 
 
 @app.on_message(filters.text & filters.create(StateFilter(AgeState.age_range)))
+@safe_c
 async def on_age_range(_, message: Message, state: State):
     ages = message.text.split(',')
 
@@ -314,11 +314,11 @@ async def on_age_range(_, message: Message, state: State):
 
 
 @app.on_callback_query(filters.create(check.india_region_preference))
+@safe
 async def on_india_region_preference(_, call: CallbackQuery):
     region = call.data.split(":")[-1]
     user_id = call.from_user.id
     is_premium = await get_value(user_id, 'is_premium')
-    country    = await get_value(user_id, 'country')
 
     if not is_premium:
         call.data = 'setting:preferences'
@@ -344,6 +344,7 @@ async def on_india_region_preference(_, call: CallbackQuery):
 
 
 @app.on_callback_query(filters.create(check.subscribe_premium))
+@safe
 async def subscribe_premium(bot: app, call: CallbackQuery):
     data = call.data.split(':')[-1]
     user_id = call.from_user.id
@@ -374,25 +375,27 @@ async def subscribe_premium(bot: app, call: CallbackQuery):
     )
 
 
-@app.on_callback_query(filters.create(check.first))
+@app.on_callback_query(filters.create(check.first_gender))
+@safe
 async def first_gender(_, call: CallbackQuery):
-
     await call.answer()
     user_id = call.from_user.id
     gender  = call.data.split(":")[-1]
-    current_gender = await get_value(user_id, 'gender')
+    await call.edit_message_text(
+        "❕**__Please select your country__**",
+        reply_markup=keyboard.first_time_country()
+    )
+    await update_user(user_id, gender=gender)
 
-    if gender == 'next':
-        await call.edit_message_reply_markup()
-        call.message.from_user.id = call.from_user.id
-        await start(_, call.message)
 
-    else:
-        if gender == current_gender:
-            gender = None
-        await call.edit_message_text(
-            "**🌼 Welcome**\n\n"
-            "❕ __To continue, you have to select your gender first__",
-            reply_markup=keyboard.first_time_gender(gender)
-        )
-        await update_user(user_id, gender=gender)
+@app.on_callback_query(filters.create(check.first_country))
+@safe
+async def first_country(_, call: CallbackQuery):
+    await call.answer()
+    user_id = call.from_user.id
+    country = call.data.split(":")[-1]
+    await update_user(user_id, country=country)
+    call.message.from_user.id = call.from_user.id
+    await start(_, call.message)
+    await call.message.delete()
+

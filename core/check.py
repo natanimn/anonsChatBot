@@ -45,8 +45,20 @@ async def user_not_exist(_, __, update: CallbackQuery | Message | PreCheckoutQue
     data = await get_user_cache(user_id)
     return not data
 
-async def first(_, __, callback: CallbackQuery):
-    return callback.data.startswith('first')
+async def first_gender(_, __, callback: CallbackQuery):
+    return callback.data.startswith('first_gender')
+
+async def first_country(_, __, callback: CallbackQuery):
+    return callback.data.startswith('first_country')
+
+async def is_new(_, __, message: Message):
+    user = await get_user_cache(message.from_user.id)
+    if user is None:
+        return True
+    elif not (user['gender'] and user['country']):
+        return True
+    else:
+        return False
 
 async def no_gender(_, __, callback: CallbackQuery | Message | PreCheckoutQuery):
     user_id = callback.from_user.id

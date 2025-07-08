@@ -1,6 +1,7 @@
 import asyncio
 from datetime import date, timedelta
 from pyrogram import Client as app, filters
+from pyrogram.errors import UserIsBlocked
 from pyrogram.types import Message
 from database.model import get_session, User
 from keyboards import keyboard
@@ -20,38 +21,69 @@ from core import check
 from pyrogram.errors.rpc_error import RPCError
 from core.var import COUNTRIES
 from config import Config
+from core import safe
+import logging
+
+logger = logging.getLogger("a2zdatingbot")
 
 
 @app.on_message(filters.private & filters.command('start'))
-async def start(_, message: Message):
+@safe
+async def start(bot: app, message: Message):
     user_id = message.from_user.id
+    text = (f"**🌷 Welcome to {bot.me.full_name}**!\n\n"
+            f"__We're excited to help you find your perfect match. "
+            f"To get started, we need to know a bit about you.__\n\n"
+            f"Firstly, could you please tell us your gender? "
+            f"Press the button below to choose any of the below\n"
+            f"- Male\n- Female\n\n"
+            "__Just press the button below. We're looking forward to helping you find love!__"
+            )
 
-    if not await user_exists(user_id):
+    user = await get_user_cache(user_id)
+    if user is None:
         await insert_user(user_id)
         await create_user_cache(user_id)
-        await message.reply(
-            "**🌼 Welcome**\n\n"
-            "❕ __To continue, you have to select your gender first__",
-            reply_markup=keyboard.first_time_gender()
-        )
+        await message.reply(text, reply_markup=keyboard.first_time_gender())
+    elif not user['gender']:
+        await message.reply(text, reply_markup=keyboard.first_time_gender())
     else:
         await message.reply(
-        f"👋 **Hello {message.from_user.mention}**,\n\n"
-        f"__Welcome to anonymous chat bot. I help you find a new "
-        f"friend on telegram from all over the world. __\n\n"
+        f"**🌟 Welcome back**\n\n"
+        f"__With this bot, you can chat with boys and girls, choosing your preferences about gender.__\n\n"
+        f"The chat is 𝙎𝙚𝙘𝙧𝙚𝙩 and 𝘼𝙣𝙤𝙣𝙮𝙢𝙤𝙪𝙨, and the people you chat with have no way to understand who you really are!\n\n"
+        f"Choose your preferences with 𝙎𝙚𝙩𝙩𝙞𝙣𝙜𝙨 🛠\n\n"
+        f"⚠️ **Spam and illegal stuff are forbidden and punished with a ban..**\n\n"
         f"**Happy chatting! 😊**",
         reply_markup=keyboard.main()
     )
 
+@app.on_message(filters.private & filters.create(check.is_new))
+@safe
+async def on_new_user(bot: app, message: Message):
+    if bot.me.id == message.from_user.id:
+        return
+
+    user = await get_user_cache(message.from_user.id)
+
+    if user is None:
+        await start(bot, message)
+    elif not user['gender']:
+        await start(bot, message)
+    else:
+        await message.reply(
+            "❕**__Please select your country__**",
+            reply_markup=keyboard.first_time_country()
+        )
 
 @app.on_message(filters.private & filters.command('chat'))
+@safe
 async def chat(bot: app, message: Message, **kwargs):
     user_id = message.from_user.id
     cache = await get_user_cache(user_id)
     state = cache['current_state']
     limit = cache['chat_count']
     closed_date = cache['chat_closed_date']
-    is_premium = cache['is_premium']
 
     if closed_date != date.today():
         await update_user(user_id, chat_count=0, chat_closed_date=date.today())
@@ -63,7 +95,7 @@ async def chat(bot: app, message: Message, **kwargs):
         )
     elif limit == Config.DAILY_CHAT_LIMIT:
         await message.reply(
-            f"❌ **Oops, you have reached your daily free {Config.DAILY_CHAT_LIMIT} chat package.**\n\n"
+            f"❌ **Oops, you have finished your daily free {Config.DAILY_CHAT_LIMIT} chat package.**\n\n"
             "❕ __Please come again tomorrow or subscribe to **/premium**.__"
         )
         await update_user(user_id, current_state=State.NONE)
@@ -71,19 +103,20 @@ async def chat(bot: app, message: Message, **kwargs):
     elif state == State.CHATTING:
         await message.reply(
             "**❗️You are already in chat**\n\n"
-            "__Press the the bellow button, or send /exit to exit current chat.__",
+            "__Send /exit to exit current chat.__",
         )
 
     elif state == State.SEARCHING:
         await message.reply(
             "❗️We are already searching for you a partner\n\n"
-            "__Press the the bellow button, or send /exit to exit current chat.__",
+            "__Send /exit to exit current chat.__",
         )
     else:
         await update_user(user_id, current_state=State.SEARCHING)
         await message.reply(
             "🔎 __Searching for a partner__",
         )
+
         event = await create_event(user_id) # create an event first
         task  = asyncio.create_task(search_partner(user_id))
         matched_user = await task
@@ -91,12 +124,16 @@ async def chat(bot: app, message: Message, **kwargs):
         if event.is_set():
             user = await get_user_cache(user_id)
             if not matched_user and user['current_state'] == State.SEARCHING:
-                await message.reply(
-                    "😞 __Sorry, we could not get any partner for you, based on your current preference__\n\n"
-                    "❕ **Change your current preference, and try again**",
-                    reply_markup=keyboard.main()
-                )
-                await update_user(user_id, current_state=State.NONE)
+                try:
+                    await message.reply(
+                        "😞 __Sorry, we could not get any partner for you, "
+                        "based on your current preference__\n\n"
+                        "❕ **Change your current preference, and try again**",
+                        reply_markup=keyboard.main()
+                    )
+                finally:
+                    await update_user(user_id, current_state=State.NONE)
+                    await delete_event(user_id)
 
             elif matched_user :
                 new_state = await get_value(user_id, 'current_state')
@@ -123,36 +160,89 @@ async def chat(bot: app, message: Message, **kwargs):
 
                     partner_full_country = partner_country + ('/' +  partner_region if partner_region else '')
                     user_full_country = user_country + ('/' + user_region if user_region else '')
+                    partner_id = matched_user.id
+                    matched_cache = await get_user_cache(partner_id)
 
-                    await message.reply(
-                        "**✅ Partner found**\n\n"
-                        f"**🔢 Age**: {matched_user.age or ''}\n"
-                        f"**👥 Gender**: {matched_user.gender or "Unknown" if user['is_premium'] else '||Premium||' }\n"
-                        f"**🌍 Country**: {partner_full_country}\n\n"
-                        f"🚫 **Links are blocked**.\n"
-                        f"__✔️ You can send media after 2 minutes__\n\n"
-                        f"**/exit - Leave Partner**",
-                    )
 
-                    await bot.send_message(
-                        matched_user.id,
-                        "**✅ Partner found**\n\n"
-                        f"**🔢 Age**: {user['age'] or ''}\n"
-                        f"**👥 Gender**: {user['gender'] or "Unknown" if matched_user.is_premium else '||Premium||'}\n"
-                        f"**🌍 Country**: {user_full_country}\n\n"
-                        f"🚫 **Links are blocked**.\n"
-                        f"__✔️ You can send media after 2 minutes__\n\n"
-                        f"**/exit - Leave Partner**",
-                    )
+                    try:
+                        age = 'Unknown' if int(matched_cache['age']) == 0 else matched_cache['age']
+                        gender = matched_cache['gender'] if matched_user.is_premium else '||For Premium||'
+                        await message.reply(
+                            "**✅ Partner found**\n\n"
+                            f"**🔢 __Age: {age}\n__**"
+                            f"**👥 __Gender: {gender}__**\n"
+                            f"**🌍 __Country: {partner_full_country}__**\n\n"
+                            f"🚫 **Links are blocked**.\n"
+                            f"__✔️ You can send media after 2 minutes__\n\n"
+                            f"**/exit - Leave Partner**",
+
+                        )
+                    except UserIsBlocked:
+                        try:
+                            await bot.send_message(
+                                partner_id,
+                                "**Error**\n\n"
+                                "__The partner we have found you just blocked the bot.\n\n"
+                                "Send /chat and find new partner__",
+                            )
+                        finally:
+                            await asyncio.gather(
+                                update_user(user_id,
+                                            current_state=State.NONE,
+                                            last_partner_id=partner_id,
+                                            chatting_with=0),
+                                update_user(partner_id,
+                                            current_state=State.NONE,
+                                            last_partner_id=user_id,
+                                            chatting_with=0)
+                            )
+                            for _id in [partner_id, user_id]:
+                                await delete_event(_id)
+                    else:
+                        try:
+                            age = 'Unknown' if int(user['age']) == 0 else user['age']
+                            gender = user['gender'] if matched_user.is_premium else '||For Premium||'
+                            await bot.send_message(
+                                matched_user.id,
+                                "**✅ Partner found**\n\n"
+                                f"**🔢 __Age: {age}\n__**"
+                                f"**👥 __Gender: {gender}__**\n"
+                                f"**🌍 __Country: {user_full_country}__**\n\n"
+                                f"🚫 **Links are blocked**.\n"
+                                f"__✔️ You can send media after 2 minutes__\n\n"
+                                f"**/exit - Leave Partner**",
+                            )
+                        except UserIsBlocked:
+                            try:
+                                await message.reply(
+                                    "**Error**\n\n"
+                                    "__The partner we have found you just blocked the bot.\n\n"
+                                    "Send /chat and find new partner__",
+                                )
+                            finally:
+                                await asyncio.gather(
+                                    update_user(user_id,
+                                                current_state=State.NONE,
+                                                last_partner_id=partner_id,
+                                                chatting_with=0),
+                                    update_user(partner_id,
+                                                current_state=State.NONE,
+                                                last_partner_id=user_id,
+                                                chatting_with=0)
+                                )
+                                for _id in [partner_id, user_id]:
+                                    await delete_event(_id)
 
             await delete_event(user_id) # Event needed no more, delete it
             await asyncio.sleep(1)
 
 
 @app.on_message(filters.private & filters.command('exit'))
+@safe
 async def exit_chat(bot: app, message: Message, **kwargs):
     user_id = message.from_user.id
     state = await get_value(user_id, 'current_state')
+
     if state == State.CHATTING:
         partner_id = await get_value(user_id, 'chatting_with')
         await close_chat(user_id, partner_id)
@@ -161,16 +251,16 @@ async def exit_chat(bot: app, message: Message, **kwargs):
                 partner_id,
                 "**🚫 Partner left the chat**\n\n"
                 "__/chat - Start new chat __\n\n"
-                "__⚠️ If the partner was violate any rule, "
-                "please report the activity using bellow button.__",
+                "__⚠️ If the partner violated any rule or commited illegal activity, "
+                "please report the user using bellow button.__",
                 reply_markup=keyboard.report_k(user_id)
             )
         finally:
             await message.reply(
                 "**🚫 You left the chat**\n\n"
                 "__/chat - start new chat __\n\n"
-                "__⚠️ If the partner was violate any rule, "
-                "please report the activity using bellow button.__",
+                "__⚠️ If the partner violated any rule or commited illegal activity, "
+                "please report the user using bellow button.__",
                 reply_markup=keyboard.report_k(partner_id)
             )
 
@@ -182,6 +272,7 @@ async def exit_chat(bot: app, message: Message, **kwargs):
 
 
 @app.on_message(filters.private & filters.command('premium'))
+@safe
 async def premium(_, message: Message, **kwargs):
     user = await get_user_cache(message.from_user.id)
     if user['is_premium']:
@@ -205,9 +296,11 @@ async def premium(_, message: Message, **kwargs):
 
 
 @app.on_message(filters.private & filters.command('rechat'))
+@safe
 async def re_chat(bot: app, message: Message, **kwargs):
     user_id = message.from_user.id
     user = await get_user_cache(user_id)
+
     if not user['is_premium']:
         await message.reply(
             "**☝️ Premium Subscription Required**\n\n"
@@ -250,11 +343,12 @@ async def re_chat(bot: app, message: Message, **kwargs):
                     "👥 **Your previous partner wanted to chat with you again.**\n\n"
                     "❔ __Would you like to chat with them again__?\n\n/yes or /no"
                 )
-            except RPCError:
+            except UserIsBlocked:
                 await message.reply(
                     "**❌ Partner not found.**\n\n"
                     "__Start another /chat __"
                 )
+                await update_user(user_id, last_partner_id=0)
             else:
                 await update_user_cache(user_id, current_state=State.SEARCHING_LAST_PARTNER)
                 await update_user_cache(last_partner_id, match_request_from=user_id)
@@ -264,17 +358,17 @@ async def re_chat(bot: app, message: Message, **kwargs):
                 )
 
 @app.on_message(filters.private & filters.command('setting'))
+@safe
 async def setting(_, message: Message, **kwargs):
     await message.reply(
         f"**⚙️ Setting**\n\n"
-        f"✔️ __From this menu, you can customize your profile: gender, age and country.__\n\n"
-        f"**🔥 If you are premium user, you can also customize your preference.**\n"
-        f"(__this will increase the matching time__)",
+        f"✔️ __From this menu, you can customize your profile: gender, age and country.__\n\n",
         reply_markup=keyboard.setting_k()
     )
 
 
 @app.on_message(filters.private & filters.command("delete"))
+@safe
 async def delete(bot: app, message: Message, **kwargs):
     user_id = message.from_user.id
     user = await get_user_cache(user_id)
@@ -284,9 +378,8 @@ async def delete(bot: app, message: Message, **kwargs):
             "❕__Subscribe to premium to use this feature__",
             reply_markup=keyboard.premium_k()
         )
-        return
 
-    if not message.reply_to_message:
+    elif not message.reply_to_message:
         await message.reply(
             "❗️ __Please reply to your message you want to delete from your partner"
         )
@@ -307,6 +400,7 @@ async def delete(bot: app, message: Message, **kwargs):
 
 
 @app.on_message(filters.private & filters.command(['yes', 'no']))
+@safe
 async def yes_no(bot: app, message: Message, **kwargs):
     user_id = message.from_user.id
     state   = await get_value(user_id, 'current_state')
@@ -352,16 +446,16 @@ async def yes_no(bot: app, message: Message, **kwargs):
                         "__From now on, you can message them__.",
                     )
 
-                except RPCError:
+                except UserIsBlocked:
                     await message.reply("**❗️️Unable to get the partner")
-                    await update_user(request_from, current_state=State.NONE, chatting_with=user_id)
+                    await update_user(request_from, current_state=State.NONE, last_partner_id=0)
                 else:
-                    await message.reply("**✅ Re matched**")
                     await asyncio.gather(
                         create_chat_cache(user_id, request_from),
                         update_user(user_id, current_state=State.CHATTING, chatting_with=request_from),
                         update_user(request_from, current_state=State.CHATTING, chatting_with=user_id)
                     )
+                    await message.reply("**✅ Re matched**")
             else:
                 await message.reply("**🚫 Partner blocked**")
                 try:
@@ -369,7 +463,8 @@ async def yes_no(bot: app, message: Message, **kwargs):
                         request_from,
                         "**❌ Sorry, the previous partner rejected your re-match request**"
                     )
-                except RPCError: pass
+                except UserIsBlocked as e:
+                    logger.error(e)
                 finally:
                     await asyncio.gather(
                         update_user(user_id, current_state=State.NONE),
@@ -378,6 +473,7 @@ async def yes_no(bot: app, message: Message, **kwargs):
             await update_user_cache(user_id, match_request_from=0)
 
 @app.on_message(filters.command('help'))
+@safe
 async def help_(_, message: Message):
     await message.reply(
         f"""**🕹 Commands **\n
@@ -402,18 +498,21 @@ async def help_(_, message: Message):
 
 
 @app.on_message(filters.command('rules'))
+@safe
 async def rules(_, message: Message):
     with open('rules.txt', encoding='utf-8') as file:
         await message.reply(file.read())
         file.close()
 
 @app.on_message(filters.command('privacy'))
+@safe
 async def privacy(_, message: Message):
     with open('privacy.txt', encoding='utf-8') as file:
         await message.reply(file.read(), disable_web_page_preview=True)
         file.close()
 
 @app.on_message(filters.command('paysupport'))
+@safe
 async def pay_support(_, message: Message):
     await message.reply(
         "**If you have any questions, do not hesitate to get in touch 👇**",

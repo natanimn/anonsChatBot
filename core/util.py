@@ -2,7 +2,6 @@ import asyncio
 import datetime
 import json
 import os
-
 import time
 from sqlalchemy import update, func, select, text, case
 from sqlalchemy import and_, or_
@@ -24,6 +23,9 @@ from database.model import (
     Subscription,
     async_session
 )
+import logging
+
+logger = logging.getLogger('a2zdatingbot')
 
 async def insert_user(user_id: int) -> User:
     """
@@ -56,6 +58,7 @@ async def search_partner(user_id: int) -> User | None:
             async with lock_search:
                 user = await get_user_cache(user_id)
                 preference = user['preference']
+
                 if user['current_state'] != State.SEARCHING:
                     break
 
@@ -75,7 +78,7 @@ async def search_partner(user_id: int) -> User | None:
                         filters.append(User.age <= int(max_age))
                     if gender := preference.get('gender'):
                        filters.append(User.gender == gender)
-                    if 'india' in preference.get('country') and preference.get('india_region'):
+                    if 'india' in preference.get('country', []) and preference.get('india_region', []):
                         regions = preference.get('india_region')
                         filters.append(
                             or_(
@@ -196,19 +199,20 @@ async def search_partner(user_id: int) -> User | None:
                         )
 
                         await session.commit()
+
                         await create_chat_cache(user_id, partner_id)
+
+                        user_kwargs['match_request_from'] = 0
+                        partner_kwargs['match_request_from'] = 0
                         await asyncio.gather(
                             update_user_cache(user_id, **user_kwargs),
                             update_user_cache(partner_id, **partner_kwargs)
                         )
-                        await asyncio.gather(
-                            update_user_cache(user_id, match_request_from=0),
-                            update_user_cache(partner_id, match_request_from=0)
-                        )
 
-                        m_event.set()
                     except Exception as e:
-                        print(e)
+                        logger.error(e)
+                        continue
+
                     event.set()
                     break
                 wait = min(0.1 + attempts*0.1 , 5)
@@ -217,6 +221,11 @@ async def search_partner(user_id: int) -> User | None:
 
         if not event.is_set():
             event.set()
+
+        if matched_scalar:
+            m_event = await get_event(matched_scalar.id)
+            if m_event:
+                m_event.set()
 
         return matched_scalar
 
@@ -241,7 +250,8 @@ async def update_user(user_id, **kwargs):
     :param kwargs:
     :return:
     """
-    user_id = int(user_id)  # ensure correct type
+    user_id = int(user_id)
+    await update_user_cache(user_id, **kwargs)
 
     async with lock_update:
         async with async_session() as session:
@@ -253,9 +263,8 @@ async def update_user(user_id, **kwargs):
                 )
                 await session.execute(stmt)
                 await session.commit()
-                await update_user_cache(user_id, **kwargs)
             except Exception as e:
-                print(f"Error updating user {user_id}: {e}")
+                logger.error(f"Error updating user {user_id}: {e}")
 
 
 async def update_user_preference(user_id, **kwargs):
@@ -366,7 +375,7 @@ async def get_user(user_id: int) -> User | None:
 
 async def get_users_id() -> list[int]:
     async with get_session() as session:
-        fetched = await session.execute(select(User.id))
+        fetched = await session.execute(select(User.id).order_by(User.created_at))
         scalars = fetched.scalars()
         return scalars
 

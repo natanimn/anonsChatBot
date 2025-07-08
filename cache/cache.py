@@ -40,11 +40,11 @@ async def create_user_cache(user_id: int):
                 'max_age': user.preference.max_age,
                 'min_age': user.preference.min_age,
                 'gender': user.preference.gender,
-                'country': user.preference.country if user.preference else [],
-                'india_region': user.preference.india_region if user.preference else []
+                'country': user.preference.country,
+                'india_region': user.preference.india_region
             }) if user.preference else '{}',
             'subscription': json.dumps({
-                'start_date': user.subscription.created_at,
+                'start_date': user.subscription.created_at.isoformat(),
                 'end_date':   user.subscription.end_date,
                 'type':       user.subscription.type
             }, default=str) if user.is_premium else '{}',
@@ -52,12 +52,11 @@ async def create_user_cache(user_id: int):
             'chatting_with': user.chatting_with or 0,
             'last_partner_id': user.last_partner_id,
             'chat_count': user.chat_count,
-            'chat_closed_date': str(user.chat_closed_date or date.today() - timedelta(days=1)),
+            'chat_closed_date': (user.chat_closed_date or date.today() - timedelta(days=1)).isoformat(),
             'report_count': user.report_count,
             'release_date': str(user.release_date or '')
         }
         await cache_client.hset(f"user-{user.id}-cache", mapping=data)
-        await cache_client.expire(f"user-{user.id}-cache", 3600)
 
 async def user_exists(user_id: int):
     data = await get_user_cache(user_id)
@@ -76,6 +75,7 @@ async def get_user_cache(user_id: int):
         cached_user = await cache_client.hgetall(f'user-{user_id}-cache')
         if not cached_user:
             return None
+
     user_data = {
         'id': int(cached_user['id']),
         'age': cached_user['age'],
@@ -185,10 +185,12 @@ async def update_chat_cache(user_id, partner_id, user_message_id, partner_messag
     chat_history = await get_chat_cache(user_id, partner_id)
 
     if chat_history:
-        chat_history[user_id][user_message_id] = partner_message_id
+        user_dict = chat_history.get(user_id, {})
+        user_dict[user_message_id] = partner_message_id
+        chat_history[user_id] = user_dict
         filename = await get_chat_cache_file(user_id, partner_id)
         chat_history[user_id] = json.dumps(chat_history[user_id])
-        chat_history[partner_id] = json.dumps(chat_history[partner_id])
+        chat_history[partner_id] = json.dumps(chat_history.get(partner_id, {}))
         chat_history['created_at'] = chat_history['created_at'].isoformat()
         await cache_client.hset(filename, mapping=chat_history)
 
