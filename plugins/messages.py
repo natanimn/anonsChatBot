@@ -23,7 +23,7 @@ from core.util import close_chat, update_user
 from keyboards import keyboard
 from core.state import State
 from core.util import contains_banned_words
-import re
+
 
 @app.on_message(filters.private & filters.text & filters.create(check.is_keyboard))
 async def message_keyboad(_, message: Message):
@@ -53,7 +53,7 @@ async def message_keyboad(_, message: Message):
         )
 
 
-@app.on_message(filters.private & filters.create(check.is_chatting))
+@app.on_message(filters.private & filters.create(check.is_chatting) & (filters.text | filters.media))
 async def get_chat_message(bot: app, message: Message):
     user_id = message.from_user.id
     message_id = message.id
@@ -134,6 +134,7 @@ async def get_chat_message(bot: app, message: Message):
         )
         return await close_chat(user_id, partner_id)
     else:
-        return await update_chat_cache(user_id, partner_id, message_id, sent_message.id)
-
+        if sent_message:
+            return await update_chat_cache(user_id, partner_id, message_id, sent_message.id)
+        return None
 

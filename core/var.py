@@ -1,10 +1,12 @@
 
 COUNTRIES = {
-    "🇪🇹 Ethiopia": 'ethiopia',
     "🇺🇸 America": 'america',
-    "🇮🇩 Indonesia": 'indonesia',
     "🇮🇳 India": 'india',
+    "🇨🇳 China": 'china',
     "🇷🇺 Russia": 'russia',
+    "🇪🇹 Ethiopia": 'ethiopia',
+    "🇮🇩 Indonesia": 'indonesia',
+    "🇸🇦 Saudi Arabia": 'saudi',
     "🇮🇷 Iran": 'iran',
     "🇺🇦 Ukraine": 'ukraine',
     "🇬🇧 UK": 'uk',
@@ -13,6 +15,9 @@ COUNTRIES = {
     "🇧🇷 Brazil": 'brazil',
     "🇳🇬 Nigeria": 'nigeria',
     "🇲🇾 Malaysia": 'malaysia',
+    "🇩🇪 Germany": 'germany',
+    "🇪🇸 Spain": 'spain',
+    "🇫🇷 France": 'france'
 }
 
 PREMIUM = {
@@ -20,8 +25,7 @@ PREMIUM = {
     '2': 250,
     '3': 1000
 }
-"""
-"""
+
 INDIA_REGIONS = {
     'Andhra Pradesh': 'andhra pradesh',
     'Arunachal Pradesh': 'arunachal pradesh',
@@ -52,12 +56,3 @@ INDIA_REGIONS = {
     'Uttarakhand': 'uttarakhand',
     'West Bengal': 'west bangal'
 }
-
-REPORTS = {
-        "📑 Ads": 'ads',
-        "👊 Violence": 'violence',
-        "🔞 Porn": 'porn',
-        "🗣 Insulting": 'insulting',
-        "🛒 Selling": 'selling',
-        "💳 Scam": 'scam'
-    }

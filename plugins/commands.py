@@ -82,11 +82,12 @@ async def chat(bot: app, message: Message, **kwargs):
     user_id = message.from_user.id
     cache = await get_user_cache(user_id)
     state = cache['current_state']
-    limit = cache['chat_count']
     closed_date = cache['chat_closed_date']
 
     if closed_date != date.today():
         await update_user(user_id, chat_count=0, chat_closed_date=date.today())
+
+    limit = cache['chat_count']
 
     if state == State.RESTRICTED:
         await message.reply(
@@ -163,10 +164,9 @@ async def chat(bot: app, message: Message, **kwargs):
                     partner_id = matched_user.id
                     matched_cache = await get_user_cache(partner_id)
 
-
                     try:
                         age = 'Unknown' if int(matched_cache['age']) == 0 else matched_cache['age']
-                        gender = matched_cache['gender'] if matched_user.is_premium else '||For Premium||'
+                        gender = matched_cache['gender'] if user['is_premium'] else '||For Premium||'
                         await message.reply(
                             "**✅ Partner found**\n\n"
                             f"**🔢 __Age: {age}\n__**"

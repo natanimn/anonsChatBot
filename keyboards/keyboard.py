@@ -3,7 +3,7 @@ from pyrogram.types import (
     InlineKeyboardMarkup,
     ReplyKeyboardMarkup,
 )
-from core.var import COUNTRIES, INDIA_REGIONS, REPORTS
+from core.var import COUNTRIES, INDIA_REGIONS
 
 keyboards = ['👥 Chat', '⚙️ Setting', '💫 Premium', '❓Help', 'ℹ️ About', '🔄 Re Chat']
 
@@ -19,7 +19,7 @@ def premium_k():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("⭐️ 100 / $1.99 — Weekly", 'subscribe_premium:1')],
         [InlineKeyboardButton("⭐️ 250 / $3.99 — Monthly", 'subscribe_premium:2')],
-        [InlineKeyboardButton("⭐️ 100 / $19.99 — Annual", 'subscribe_premium:3')]
+        [InlineKeyboardButton("⭐️ 1000 / $19.99 — Annual", 'subscribe_premium:3')]
     ])
 
 def setting_k():
@@ -153,14 +153,21 @@ def report_k(partner_id):
 
 
 def report_categories_k(partner_id: int | str, user_is_premium: bool):
-
+    reports = {
+        "📑 Ads": 'ads',
+        "👊 Violence": 'violence',
+        "🔞 Porn": 'porn',
+        "🗣 Insulting": 'insulting',
+        "🛒 Selling": 'selling',
+        "💳 Scam": 'scam'
+    }
     if user_is_premium:
-        REPORTS["👤 Fake gender"] =  'fake gender'
+        reports["👤 Fake gender"] =  'fake gender'
 
     return InlineKeyboardMarkup([
             *[
                 [InlineKeyboardButton(k, f'c_report:{v}:{partner_id}')]
-            for k, v in REPORTS.items()
+            for k, v in reports.items()
             ],
         [
             InlineKeyboardButton("❌ Cancel Report", f'c_report:cancel:{partner_id}')

@@ -174,7 +174,6 @@ async def subscribe(bot: app, message: Message):
 async def add_banned_words(bot: app, message: Message):
     word = message.text.replace("/addbword", "")
     words = [w.strip() for w in word.split(",")]
-
     if not words:
         await message.reply("No word is added")
     else:

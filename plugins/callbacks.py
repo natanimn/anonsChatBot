@@ -72,7 +72,7 @@ async def on_setting(_, call: CallbackQuery, state: State | None):
                 "__From this menu you can customize your preferences, your current preference:__\n\n"
                 f"__Gender__: {preference.get('gender') or "Both"}\n"
                 f"__Age range__: {preference.get('min_age') or ''} - {preference.get('max_age') or ''}\n"
-                f"__Countries__: {', '.join(preference.get('country', []))}\n\n"
+                f"__Countries__: {', '.join(preference.get('country') or [])}\n\n"
                 f"(__this will increase the matching time__)",
                 reply_markup=keyboard.preferences_k()
         )
@@ -202,7 +202,7 @@ async def on_preference(_, call: CallbackQuery, state: State | None):
         await state.set_state(AgeState.age_range)
 
     elif data == 'countries':
-        countries = preference.get('country', [])
+        countries = preference.get('country') or []
         await call.edit_message_text(
             "**🌍 Country**\n\n"
             f"__Preferences: {', '.join(countries)}",
@@ -210,7 +210,7 @@ async def on_preference(_, call: CallbackQuery, state: State | None):
         )
 
     elif data == 'india_region':
-        regions = preference.get('india_region', [])
+        regions = preference.get('india_region') or []
         await call.edit_message_text(
             "**Indian region.\n\n"
             f"**Preference:** {', '.join(regions)}__",
@@ -307,7 +307,7 @@ async def on_age_range(_, message: Message, state: State):
             "__From this menu you can customize your preferences, your current preference:__\n\n"
             f"__Gender__: {preference.get('gender') or "Both"}\n"
             f"__Age range__: {preference.get('min_age') or ''} - {preference.get('max_age') or ''}\n"
-            f"__Countries__: {', '.join(preference.get('country'))}\n\n"
+            f"__Countries__: {', '.join(preference.get('country') or [])}\n\n"
             f"(__this will increase the matching time__)",
             reply_markup=keyboard.preferences_k()
         )

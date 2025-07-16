@@ -137,6 +137,7 @@ async def search_partner(user_id: int) -> User | None:
                 matched = await session.execute(
                     select(User)
                     .where(and_(*filters))
+                    .order_by(func.random())
                     .limit(1)
                     .options(selectinload(User.preference), selectinload(User.subscription))
                     .with_for_update(skip_locked=True)
