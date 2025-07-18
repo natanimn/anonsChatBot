@@ -95,7 +95,6 @@ async def get_chat_message(bot: app, message: Message):
             if now < total:
                 return await message.reply("**☝️ You can't any send media now**")
             else:
-                await asyncio.sleep(0.5)
                 if message.photo:
                     try:
                         sent_message = await bot.send_photo(
@@ -119,7 +118,6 @@ async def get_chat_message(bot: app, message: Message):
                         await asyncio.sleep(fw.value)
                         sent_message = await bot.copy_message(partner_id, user_id, message_id)
         else:
-            await asyncio.sleep(0.5)
             try:
                 sent_message = await bot.copy_message(partner_id, user_id, message_id)
             except FloodWait as fw:

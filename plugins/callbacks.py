@@ -1,5 +1,3 @@
-import json
-
 from pyrogram import Client as app, filters
 from pyrogram.errors import RPCError
 from pyrogram.types import CallbackQuery, Message
@@ -13,7 +11,8 @@ from pyrogram_patch.fsm.filter import StateFilter
 from pyrogram.types import LabeledPrice
 import uuid
 from .commands import premium, start, setting
-from core import safe, safe_c
+from core.decorators import safe, safe_c
+from config import Config
 
 class AgeState(StatesGroup):
     age = StateItem()
@@ -80,9 +79,14 @@ async def on_setting(_, call: CallbackQuery, state: State | None):
         try:
             await state.finish()
         finally:
+            limit = await get_value(user_id, 'chat_count')
+            is_premium = await get_value(user_id, 'is_premium')
+            lim_text = f"**__You have used __{limit}__ out of {Config.DAILY_CHAT_LIMIT} your daily chat limit.__**" \
+                if not is_premium else "**__Enjoy your unlimited daily chat__**"
             await call.edit_message_text(
                 f"**⚙️ Setting**\n\n"
-                f"✔️ __From this menu, you can customize your profile: gender, age and country.__\n\n",
+                f"✔️ __From this menu, you can customize your profile: gender, age and country.__\n\n"
+                f"{lim_text}",
                 reply_markup=keyboard.setting_k()
             )
 

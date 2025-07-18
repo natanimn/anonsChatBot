@@ -7,7 +7,7 @@ from schedules.schedule import async_scheduler
 from core import check
 from database.model import User, get_session
 from config import Config
-from core import safe
+from core.decorators import safe
 
 @app.on_pre_checkout_query()
 async def on_pre_checkout_query(_, query: PreCheckoutQuery):

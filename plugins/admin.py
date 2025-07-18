@@ -18,8 +18,10 @@ from pyrogram.errors import BadRequest, FloodWait, RPCError, UserIsBlocked
 from schedules.schedule import async_scheduler, unrestrict_user
 from core.state import State
 from core.util import get_user_statistics
+from core.decorators import admin, safe
 
-@app.on_message(filters.private & filters.create(check.admin) & filters.command('broadcast'))
+@app.on_message(filters.private & filters.command('broadcast'))
+@admin
 async def broadcast(bot: app, message: Message):
     admin_id = message.from_user.id
     reply    = message.reply_to_message
@@ -30,15 +32,15 @@ async def broadcast(bot: app, message: Message):
             "__Please reply to any message you want to broadcast__"
         )
     else:
-        start = datetime.now()
         sent  = 0
         failed = 0
         users_id = await get_users_id()
         sent_to  = 0
         total = 0
+        start = datetime.now()
         for user_id in users_id:
             if sent_to == 30:
-                await asyncio.sleep(1)
+                await asyncio.sleep(0.5)
                 sent_to = 0
             try:
                 await bot.copy_message(user_id, admin_id, reply.id)
@@ -66,7 +68,9 @@ async def broadcast(bot: app, message: Message):
         )
 
 
-@app.on_message(filters.private & filters.create(check.admin) & filters.command('refund'))
+@app.on_message(filters.private  & filters.command('refund'))
+@admin
+@safe
 async def refund(bot: app, message: Message):
     args = message.text.split()
 
@@ -88,8 +92,6 @@ async def refund(bot: app, message: Message):
                     "and your premium subscription is stopped.__\n\n"
                     "**Thankyou for using this bot**"
                 )
-            except (BadRequest, UserIsBlocked):
-                pass
             finally:
                 await delete_user_subscription(int(user_id))
         except RPCError as e:
@@ -103,7 +105,8 @@ async def refund(bot: app, message: Message):
             await message.reply("**✅ Star refunded successfully**")
 
 
-@app.on_message(filters.private & filters.create(check.admin) & filters.command('sub'))
+@app.on_message(filters.private  & filters.command('sub'))
+@admin
 async def subscribe(bot: app, message: Message):
     args = message.text.split()
     if len(args) != 3:
@@ -170,7 +173,8 @@ async def subscribe(bot: app, message: Message):
                             f"has been added to {user_id} successfully**"
                         )
 
-@app.on_message(filters.private & filters.create(check.admin) & filters.command('addbword'))
+@app.on_message(filters.private  & filters.command('addbword'))
+@admin
 async def add_banned_words(bot: app, message: Message):
     word = message.text.replace("/addbword", "")
     words = [w.strip() for w in word.split(",")]
@@ -180,12 +184,13 @@ async def add_banned_words(bot: app, message: Message):
         await add_banned_word(words)
         await message.reply(f"{", ".join(words)}\n\nAdded as banned word")
 
-@app.on_message(filters.private & filters.create(check.admin) & filters.command('ban'))
+@app.on_message(filters.private  & filters.command(['ban', 'ban10']))
+@admin
 async def ban(bot: app, message: Message):
     user_id = message.text.split()[-1]
 
     if user_id == message.text:
-        await message.reply("**ERROR**\n\n__This command only works as\n /ban user_id__")
+        await message.reply("**ERROR**\n\n__This command only works as\n /ban user_id or\n/ban10 user_id__")
     else:
         user  = await get_user_cache(int(user_id))
 
@@ -195,7 +200,10 @@ async def ban(bot: app, message: Message):
             if user['current_state'] == State.RESTRICTED:
                 await message.reply("**This user is already banned/restricted**")
             else:
-                tomorrow = datetime.now() + timedelta(days=1)
+                if message.text.split(":")[0] == '/ban10':
+                    tomorrow = datetime.now() + timedelta(days=3650)
+                else:
+                    tomorrow = datetime.now() + timedelta(days=1)
                 await update_user(
                     int(user_id),
                     report_count=10,
@@ -220,7 +228,8 @@ async def ban(bot: app, message: Message):
                     await message.reply(f"**User has been banned until __{tomorrow}__**")
 
 
-@app.on_message(filters.private & filters.create(check.admin) & filters.command('unban'))
+@app.on_message(filters.private  & filters.command('unban'))
+@admin
 async def unban(bot: app, message: Message):
     user_id = message.text.split()[-1]
     if user_id == message.text:
@@ -238,7 +247,8 @@ async def unban(bot: app, message: Message):
                 await message.reply("**User has been unbanned successfully!**")
 
 
-@app.on_message(filters.private & filters.create(check.admin) & filters.command('stats'))
+@app.on_message(filters.private  & filters.command('stats'))
+@admin
 async def stats(_, message: Message):
     reply = await message.reply("__Processing ...__")
     result = await get_user_statistics()
@@ -252,7 +262,8 @@ async def stats(_, message: Message):
         f"**Other**: __{result['other_users']}__"
     )
 
-@app.on_message(filters.private & filters.create(check.admin) & filters.command('unsub'))
+@app.on_message(filters.private  & filters.command('unsub'))
+@admin
 async def unsubscribe(bot: app, message: Message):
     user_id = message.text.split()[-1]
     if user_id == message.text:

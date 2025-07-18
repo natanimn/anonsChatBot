@@ -21,7 +21,7 @@ from core import check
 from pyrogram.errors.rpc_error import RPCError
 from core.var import COUNTRIES
 from config import Config
-from core import safe
+from core.decorators import safe
 import logging
 
 logger = logging.getLogger("a2zdatingbot")
@@ -87,14 +87,14 @@ async def chat(bot: app, message: Message, **kwargs):
     if closed_date != date.today():
         await update_user(user_id, chat_count=0, chat_closed_date=date.today())
 
-    limit = cache['chat_count']
+    limit = await get_value(user_id, 'chat_count')
 
     if state == State.RESTRICTED:
         await message.reply(
             "**❗️Due to violation of rules,** "
             f"__you have been restricted from chatting with anyone until {cache['release_date']}__"
         )
-    elif limit == Config.DAILY_CHAT_LIMIT:
+    elif limit >= Config.DAILY_CHAT_LIMIT:
         await message.reply(
             f"❌ **Oops, you have finished your daily free {Config.DAILY_CHAT_LIMIT} chat package.**\n\n"
             "❕ __Please come again tomorrow or subscribe to **/premium**.__"
@@ -360,9 +360,15 @@ async def re_chat(bot: app, message: Message, **kwargs):
 @app.on_message(filters.private & filters.command('setting'))
 @safe
 async def setting(_, message: Message, **kwargs):
+    user_id = message.from_user.id
+    limit = await get_value(user_id, 'chat_count')
+    is_premium = await get_value(user_id, 'is_premium')
+    lim_text = f"**__You have used __{limit}__ out of {Config.DAILY_CHAT_LIMIT} your daily chat limit.__**" \
+        if not is_premium else "**__Enjoy your unlimited daily chat__**"
     await message.reply(
         f"**⚙️ Setting**\n\n"
-        f"✔️ __From this menu, you can customize your profile: gender, age and country.__\n\n",
+        f"✔️ __From this menu, you can customize your profile: gender, age and country.__\n\n"
+        f"{lim_text}",
         reply_markup=keyboard.setting_k()
     )
 
@@ -450,8 +456,8 @@ async def yes_no(bot: app, message: Message, **kwargs):
                     await message.reply("**❗️️Unable to get the partner")
                     await update_user(request_from, current_state=State.NONE, last_partner_id=0)
                 else:
+                    await create_chat_cache(user_id, request_from)
                     await asyncio.gather(
-                        create_chat_cache(user_id, request_from),
                         update_user(user_id, current_state=State.CHATTING, chatting_with=request_from),
                         update_user(request_from, current_state=State.CHATTING, chatting_with=user_id)
                     )
@@ -500,14 +506,14 @@ async def help_(_, message: Message):
 @app.on_message(filters.command('rules'))
 @safe
 async def rules(_, message: Message):
-    with open('rules.txt', encoding='utf-8') as file:
+    with open('/privacy_and_rules/rules.txt', encoding='utf-8') as file:
         await message.reply(file.read())
         file.close()
 
 @app.on_message(filters.command('privacy'))
 @safe
 async def privacy(_, message: Message):
-    with open('privacy.txt', encoding='utf-8') as file:
+    with open('/privacy_and_rules/privacy.txt', encoding='utf-8') as file:
         await message.reply(file.read(), disable_web_page_preview=True)
         file.close()
 

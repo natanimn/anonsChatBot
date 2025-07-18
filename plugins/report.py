@@ -4,6 +4,7 @@ from pyrogram.types import CallbackQuery, Message, ForceReply
 from cache.cache import get_value
 from core.util import get_user, update_user
 from core import check
+from core.decorators import safe, safe_c
 from keyboards import keyboard
 from core.state import State as _State
 from pyrogram_patch.fsm.states import StateItem, State, StatesGroup
@@ -16,6 +17,7 @@ class ReportState(StatesGroup):
     get_proof = StateItem()
 
 @app.on_callback_query(filters.create(check.report))
+@safe
 async def report_chat(_, call: CallbackQuery):
     await call.answer()
     partner_id = call.data.split(":")[-1]
@@ -27,6 +29,7 @@ async def report_chat(_, call: CallbackQuery):
     )
 
 @app.on_callback_query(filters.create(check.c_report))
+@safe_c
 async def c_report(_, call: CallbackQuery, state: State):
 
     category, partner_id = call.data.split(":")[1:]
@@ -53,6 +56,7 @@ async def c_report(_, call: CallbackQuery, state: State):
 
 
 @app.on_message(filters.create(StateFilter(ReportState.get_proof)))
+@safe_c
 async def get_report_proof(bot: app, message: Message, state: State):
     data = await state.get_data()
     partner_id = data['partner_id']
