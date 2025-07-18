@@ -186,6 +186,7 @@ async def add_banned_words(bot: app, message: Message):
 
 @app.on_message(filters.private  & filters.command(['ban', 'ban10']))
 @admin
+@safe
 async def ban(bot: app, message: Message):
     user_id = message.text.split()[-1]
 
@@ -200,7 +201,7 @@ async def ban(bot: app, message: Message):
             if user['current_state'] == State.RESTRICTED:
                 await message.reply("**This user is already banned/restricted**")
             else:
-                if message.text.split(":")[0] == '/ban10':
+                if message.text.split()[0] == '/ban10':
                     tomorrow = datetime.now() + timedelta(days=3650)
                 else:
                     tomorrow = datetime.now() + timedelta(days=1)

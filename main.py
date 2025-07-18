@@ -20,7 +20,6 @@ logging.basicConfig(
 
 async def add_commands(bot: Client):
     await bot.set_bot_commands([
-        BotCommand('developer', "Bot developer"),
         BotCommand('start', "Start message"),
         BotCommand('rules', "Bot rules"),
         BotCommand('chat', "Find new partner"),
@@ -32,6 +31,7 @@ async def add_commands(bot: Client):
         BotCommand('privacy', "Privacy and Policy"),
         BotCommand('help', "Get help"),
         BotCommand('paysupport', "Payment support"),
+        BotCommand('developer', "Bot developer")
     ])
 
 async def run_bot():
@@ -48,8 +48,8 @@ async def run_bot():
         plugins={
             'root': 'plugins'
         },
+        workers=200,
         skip_updates=False,
-        workers=200
     )
 
     patch_manager = patch(bot)

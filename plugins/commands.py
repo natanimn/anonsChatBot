@@ -506,14 +506,14 @@ async def help_(_, message: Message):
 @app.on_message(filters.command('rules'))
 @safe
 async def rules(_, message: Message):
-    with open('/privacy_and_rules/rules.txt', encoding='utf-8') as file:
+    with open('./privacy_and_rules/rules.txt', encoding='utf-8') as file:
         await message.reply(file.read())
         file.close()
 
 @app.on_message(filters.command('privacy'))
 @safe
 async def privacy(_, message: Message):
-    with open('/privacy_and_rules/privacy.txt', encoding='utf-8') as file:
+    with open('./privacy_and_rules/privacy.txt', encoding='utf-8') as file:
         await message.reply(file.read(), disable_web_page_preview=True)
         file.close()
 
