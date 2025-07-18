@@ -526,6 +526,45 @@ async def pay_support(_, message: Message):
 
     )
 
+@app.on_message(filters.command("developer"))
+async def developer(_, message: Message):
+    text = """**🤖 Bot Developer**
+    
+**Whether you need a:**
+🤖 Customer service bot
+👨‍👩‍👧‍👦 Group/channel moderation bot
+💰 Airdrop or crypto campaign bot
+💬 Anonymous Chatting bot
+🌐 Full-featured web app integration
+
+🔧 **What I Offer:**
+__
+▫️API integrations with any platform
+▫️Admin panels & user management systems
+▫️Secure payment gateway integration
+▫️Hosting + deployment
+▫️Clean, scalable Python code
+▫️Long term support & updates
+__
+
+✅ **My bots are:**
+
+Fast ⚡️
+Secure 🔐
+Easy to use 🎯
+Fully documented 📄
+
+📩 **DM me if you're looking for:**
+
+✅ A serious developer (not a script copier)
+✅ Someone who understands your goals
+✅ A custom solution, not a one size fits all template
+
+DM @Natiprado
+"""
+    await message.reply(text)
+
+
 
 
 
