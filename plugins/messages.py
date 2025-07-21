@@ -23,6 +23,7 @@ from core.util import close_chat, update_user
 from keyboards import keyboard
 from core.state import State
 from core.util import contains_banned_words
+from core.decorators import safe
 
 
 @app.on_message(filters.private & filters.text & filters.create(check.is_keyboard))
@@ -54,6 +55,7 @@ async def message_keyboad(_, message: Message):
 
 
 @app.on_message(filters.private & filters.create(check.is_chatting) & (filters.text | filters.media))
+@safe
 async def get_chat_message(bot: app, message: Message):
     user_id = message.from_user.id
     message_id = message.id
@@ -61,7 +63,10 @@ async def get_chat_message(bot: app, message: Message):
     user_status = await get_value(user_id, 'current_state')
     partner_status = await get_value(partner_id, 'current_state')
 
-    if user_status == State.RESTRICTED or partner_status == State.RESTRICTED:
+    if partner_id == 0:
+        return None
+
+    elif user_status == State.RESTRICTED or partner_status == State.RESTRICTED:
         await close_chat(user_id, partner_id)
         try:
             await bot.send_message(partner_id, "**Chat closed**", reply_markup=keyboard.main())
@@ -132,7 +137,9 @@ async def get_chat_message(bot: app, message: Message):
         )
         return await close_chat(user_id, partner_id)
     else:
-        if sent_message:
-            return await update_chat_cache(user_id, partner_id, message_id, sent_message.id)
+        if sent_message and partner_id and message_id:
+            sent_id = sent_message.id
+            if sent_id:
+                return await update_chat_cache(user_id, partner_id, message_id, sent_id)
         return None
 

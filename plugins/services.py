@@ -11,16 +11,11 @@ from core.decorators import safe
 
 @app.on_pre_checkout_query()
 async def on_pre_checkout_query(_, query: PreCheckoutQuery):
-    price   = query.total_amount
-    # premium = await get_value(query.from_user.id, 'premium')
     is_premium = await get_value(query.from_user.id, 'is_premium')
-
     try:
-        # assert premium is not None
         assert not is_premium
     except AssertionError:
         await query.answer(False, "You have already subscribed to premium")
-
     else:
         await query.answer(True)
 

@@ -63,8 +63,18 @@ async def get_report_proof(bot: app, message: Message, state: State):
     if not message.photo:
         await message.reply("**Please attach only a photo**", reply_markup=ForceReply())
     else:
+        await message.reply(
+            "**Thankyou for your participation**\n\n"
+            "__We will review the report and take an action__.",
+            reply_markup=keyboard.main()
+        )
+
         partner = await get_user(partner_id)
-        if partner.report_count + 1 >= 10:
+
+        if partner.current_state == _State.RESTRICTED:
+            return await state.finish()
+
+        elif partner.report_count + 1 >= 10:
             tomorrow = datetime.now() + timedelta(days=1)
             await update_user(
                 partner_id,
@@ -76,8 +86,8 @@ async def get_report_proof(bot: app, message: Message, state: State):
                 await bot.send_message(
                     partner_id,
                     "**Dear user**,\n\n"
-                    f"__❗️Due to rule violation, and you have been reported frequently by many users, "
-                    f"you are restricted from chatting with anyone until {tomorrow}__"
+                    f"__❗️Due to rule violation and you have been reported frequently by many users, "
+                    f"you are restricted from chatting with anyone until {tomorrow.isoformat().split('.')[0]}__"
                 )
             finally:
                 async_scheduler.add_job(
@@ -87,6 +97,16 @@ async def get_report_proof(bot: app, message: Message, state: State):
                     args=(partner_id,),
                     id=f'ban_user-{partner_id}'
                 )
+                try:
+                    await bot.send_message(Config.REPORT_CHANNEL_ID,
+                        "**🚫User Banned **\n\n"
+                            f"**User ID:** <code>{partner_id}</code>\n"
+                            f"**Reason**: {data['category']}\n"
+                            f"**Until:** __{tomorrow.isoformat().split('.')[0]}__"
+                    )
+
+                finally:
+                    await state.finish()
 
         else:
             await update_user(
@@ -104,18 +124,13 @@ async def get_report_proof(bot: app, message: Message, state: State):
                 except RPCError:
                     pass
 
-        await message.reply(
-            "**Thankyou for your participation**\n\n"
-            "__We will review the report and take an action__.",
-            reply_markup=keyboard.main()
-        )
-        try:
-            await bot.send_photo(
-                Config.REPORT_CHANNEL_ID,
-                message.photo.file_id,
-                f"**REPORTER ID**: <code>{message.from_user.id}</code>\n"
-                f"**REPORT CATEGORY**: {data['category']}\n"
-                f"**REPORTED USER ID**: <code>{data['partner_id']}</code>"
-            )
-        finally:
-            await state.finish()
+            try:
+                await bot.send_photo(
+                    Config.REPORT_CHANNEL_ID,
+                    message.photo.file_id,
+                    f"**REPORTER ID**: <code>{message.from_user.id}</code>\n"
+                    f"**REPORT CATEGORY**: {data['category']}\n"
+                    f"**REPORTED USER ID**: <code>{data['partner_id']}</code>"
+                )
+            finally:
+                await state.finish()

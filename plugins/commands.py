@@ -136,9 +136,9 @@ async def chat(bot: app, message: Message, **kwargs):
                     await update_user(user_id, current_state=State.NONE)
                     await delete_event(user_id)
 
-            elif matched_user :
-                new_state = await get_value(user_id, 'current_state')
-                partner_state = await get_value(matched_user.id, 'current_state')
+            elif matched_user:
+                new_state = user['current_state']
+                partner_state = matched_user['current_state']
 
                 if new_state == State.CHATTING and partner_state == State.CHATTING:
                     partner_country = ''
@@ -146,15 +146,15 @@ async def chat(bot: app, message: Message, **kwargs):
                     user_country = ''
                     user_region = ''
 
-                    if matched_user.country or user['country']:
+                    if matched_user['country'] or user['country']:
                         for k, v in  COUNTRIES.items():
-                            if matched_user.country == v:
+                            if matched_user['country'] == v:
                                 partner_country = k
                             if user['country'] == v:
                                 user_country = k
 
-                    if matched_user.india_region:
-                        partner_region = matched_user.india_region
+                    if matched_user['india_region']:
+                        partner_region = matched_user['india_region']
 
                     if user['india_region']:
                         user_region = user['india_region']
@@ -162,11 +162,9 @@ async def chat(bot: app, message: Message, **kwargs):
                     partner_full_country = partner_country + ('/' +  partner_region if partner_region else '')
                     user_full_country = user_country + ('/' + user_region if user_region else '')
                     partner_id = matched_user.id
-                    matched_cache = await get_user_cache(partner_id)
-
                     try:
-                        age = 'Unknown' if int(matched_cache['age']) == 0 else matched_cache['age']
-                        gender = matched_cache['gender'] if user['is_premium'] else '||For Premium||'
+                        age = 'Unknown' if int(matched_user['age']) == 0 else matched_user['age']
+                        gender = matched_user['gender'] if user['is_premium'] else '||For Premium||'
                         await message.reply(
                             "**✅ Partner found**\n\n"
                             f"**🔢 __Age: {age}\n__**"
@@ -201,9 +199,9 @@ async def chat(bot: app, message: Message, **kwargs):
                     else:
                         try:
                             age = 'Unknown' if int(user['age']) == 0 else user['age']
-                            gender = user['gender'] if matched_user.is_premium else '||For Premium||'
+                            gender = user['gender'] if matched_user['is_premium'] else '||For Premium||'
                             await bot.send_message(
-                                matched_user.id,
+                                matched_user['id'],
                                 "**✅ Partner found**\n\n"
                                 f"**🔢 __Age: {age}\n__**"
                                 f"**👥 __Gender: {gender}__**\n"

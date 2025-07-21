@@ -37,6 +37,9 @@ def setting_k():
     ])
 
 def preferences_k(locked=False):
+    b = []
+    if not locked:
+        b.append(InlineKeyboardButton("🆑 Reset", 'preferences:reset'))
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton("👤 Gender" if not locked else "🔐 Gender", 'preferences:gender'),
@@ -45,6 +48,7 @@ def preferences_k(locked=False):
         [
             InlineKeyboardButton("🌍 Countries" if not locked else "🔐 Countries", 'preferences:countries'),
         ],
+        b,
         [InlineKeyboardButton("🔙 Back", 'setting:back')]
     ])
 

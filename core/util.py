@@ -39,7 +39,7 @@ async def insert_user(user_id: int) -> User:
         await session.commit()
         return user
 
-async def search_partner(user_id: int) -> User | None:
+async def search_partner(user_id: int) -> dict | None:
     """
     Search a partner for user on a given event ooop
     :param user_id:
@@ -49,7 +49,7 @@ async def search_partner(user_id: int) -> User | None:
     event: asyncio.Event = await get_event(user_id)
     async with (get_session() as session):
         timeout = int(os.getenv('TIMEOUT', 120))
-        matched_scalar = None
+        matched_scalar, matched_scalar_id = None, None
         start = time.time()
         user  = await get_user_cache(user_id)
         attempts = 0
@@ -135,22 +135,21 @@ async def search_partner(user_id: int) -> User | None:
                 )
 
                 matched = await session.execute(
-                    select(User)
+                    select(User.id)
                     .where(and_(*filters))
                     .order_by(func.random())
                     .limit(1)
-                    .options(selectinload(User.preference), selectinload(User.subscription))
                     .with_for_update(skip_locked=True)
                 )
-                matched_scalar = matched.scalar_one_or_none()
-
+                matched_scalar_id = matched.scalar_one_or_none()
+                matched_scalar    = await get_user_cache(matched_scalar_id)
                 if (
                         matched_scalar and
-                        matched_scalar.current_state == State.SEARCHING and
+                        matched_scalar['current_state'] == State.SEARCHING and
                         user['current_state'] == State.SEARCHING
                 ):
                     try:
-                        partner_id = matched_scalar.id
+                        partner_id = matched_scalar_id
                         m_event = await get_event(partner_id)
                         if not m_event:
                             await session.execute(
@@ -171,8 +170,8 @@ async def search_partner(user_id: int) -> User | None:
                         else:
                             count = 0
 
-                        if not matched_scalar.is_premium:
-                            p_count = matched_scalar.chat_count + 1
+                        if not matched_scalar['is_premium']:
+                            p_count = matched_scalar['chat_count'] + 1
                         else:
                             p_count = 0
 
@@ -224,7 +223,7 @@ async def search_partner(user_id: int) -> User | None:
             event.set()
 
         if matched_scalar:
-            m_event = await get_event(matched_scalar.id)
+            m_event = await get_event(matched_scalar['id'])
             if m_event:
                 m_event.set()
 

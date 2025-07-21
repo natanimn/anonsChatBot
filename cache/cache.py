@@ -62,12 +62,15 @@ async def user_exists(user_id: int):
     data = await get_user_cache(user_id)
     return data
 
-async def get_user_cache(user_id: int):
+async def get_user_cache(user_id: int | None):
     """
     Get user's cache sored in a memory
     :param user_id:
     :return:
     """
+    if user_id is None:
+        return None
+
     cached_user = await cache_client.hgetall(f'user-{user_id}-cache')
 
     if not cached_user:

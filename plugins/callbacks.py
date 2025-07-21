@@ -137,10 +137,17 @@ async def on_update_age(_, message: Message, state: State):
             reply_markup=keyboard.back()
         )
     else:
-        await update_user(message.from_user.id, age=int(message.text))
-        await state.finish()
-        await message.reply("✅ **Age updated**")
-        await setting(_, message)
+        if not (12 <= int(message.text) <= 80):
+            await message.reply(
+                "**❌ Invalid age**\n\n"
+                "__Please enter valid age between 12 and 80__",
+                reply_markup=keyboard.back()
+            )
+        else:
+            await update_user(message.from_user.id, age=int(message.text))
+            await state.finish()
+            await message.reply("✅ **Age updated**")
+            await setting(_, message)
 
 
 @app.on_callback_query(filters.create(check.india_region))
@@ -177,10 +184,13 @@ async def on_indian_region(_, call: CallbackQuery):
 @app.on_callback_query(filters.create(check.preference))
 @safe_c
 async def on_preference(_, call: CallbackQuery, state: State | None):
-    await call.answer()
+
     data = call.data.split(":")[-1]
     user_id = call.from_user.id
     is_premium = await get_value(user_id, 'is_premium')
+
+    if data != 'reset':
+        await call.answer()
 
     if not is_premium:
         call.data = 'setting:preferences'
@@ -221,6 +231,9 @@ async def on_preference(_, call: CallbackQuery, state: State | None):
             reply_markup=keyboard.india_regions_preference_k(regions)
         )
 
+    elif data == "reset":
+        await update_user_preference(user_id, gender=None, country=[], india_region=[], min_age=None, max_age=None)
+        await call.answer("Preference restored", show_alert=True)
     else:
         try:
             await state.finish()
