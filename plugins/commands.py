@@ -161,7 +161,7 @@ async def chat(bot: app, message: Message, **kwargs):
 
                     partner_full_country = partner_country + ('/' +  partner_region if partner_region else '')
                     user_full_country = user_country + ('/' + user_region if user_region else '')
-                    partner_id = matched_user.id
+                    partner_id = matched_user['id']
                     try:
                         age = 'Unknown' if int(matched_user['age']) == 0 else matched_user['age']
                         gender = matched_user['gender'] if user['is_premium'] else '||For Premium||'
