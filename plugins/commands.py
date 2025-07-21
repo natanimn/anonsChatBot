@@ -201,7 +201,7 @@ async def chat(bot: app, message: Message, **kwargs):
                             age = 'Unknown' if int(user['age']) == 0 else user['age']
                             gender = user['gender'] if matched_user['is_premium'] else '||For Premium||'
                             await bot.send_message(
-                                matched_user['id'],
+                                partner_id,
                                 "**✅ Partner found**\n\n"
                                 f"**🔢 __Age: {age}\n__**"
                                 f"**👥 __Gender: {gender}__**\n"

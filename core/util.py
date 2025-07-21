@@ -223,6 +223,7 @@ async def search_partner(user_id: int) -> dict | None:
             event.set()
 
         if matched_scalar:
+            matched_scalar['current_state'] = State.CHATTING
             m_event = await get_event(matched_scalar['id'])
             if m_event:
                 m_event.set()
