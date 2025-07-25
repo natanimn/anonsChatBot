@@ -39,7 +39,6 @@ async def run_bot():
     Main function to run the bot
     :return:
     """
-
     bot = Client(
         'anon_chat',
         api_id=Config.API_ID,

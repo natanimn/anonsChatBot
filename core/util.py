@@ -216,7 +216,7 @@ async def search_partner(user_id: int) -> dict | None:
                     event.set()
                     break
                 wait = min(0.1 + attempts*0.1 , 5)
-                await asyncio.sleep(wait)
+                await asyncio.sleep(0.1)
                 attempts += 1
 
         if not event.is_set():

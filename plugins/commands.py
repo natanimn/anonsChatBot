@@ -562,7 +562,3 @@ DM @Natiprado
 """
     await message.reply(text)
 
-
-
-
-

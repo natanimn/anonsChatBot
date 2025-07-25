@@ -4,29 +4,39 @@ from pyrogram.errors import (
     UserIsBlocked,
     BadRequest,
     QueryIdInvalid,
-    MessageNotModified
+    MessageNotModified,
+    MessageDeleteForbidden
 )
 import logging
 import asyncio
-from pyrogram import Client
 from pyrogram.types import Message, CallbackQuery
 from config import Config
-
 logger = logging.getLogger("a2zdatingbot")
 
+ignore_update = False
+active_tasks  = list()
 
 def safe(handler):
     @wraps(handler)
     async def wrapper(client, obj, **kwargs):
+        global ignore_update, active_tasks
+        loop = None
         try:
-            await handler(client, obj, **kwargs)
+            loop = asyncio.create_task(handler(client, obj, **kwargs))
+            active_tasks.append(loop)
+            if not ignore_update:
+                await loop
         except FloodWait as e:
-            logger.error(f"FloodWait - The bot stopped receiving updates for {e.value} second(s).")
-            await client.stop()
+            logger.error(f"FloodWait - bot ignored updates fpr {e.value} seconds")
+            for tasks in active_tasks:
+                tasks.cancel()
+            ignore_update = True
             await asyncio.sleep(e.value)
-            await client.start()
+            ignore_update = False
+        except asyncio.CancelledError:
+            active_tasks.remove(loop)
         except Exception as e:
-            if not isinstance(e, (UserIsBlocked, MessageNotModified, QueryIdInvalid, BadRequest)):
+            if not isinstance(e, (UserIsBlocked, MessageNotModified, QueryIdInvalid, BadRequest, MessageDeleteForbidden)):
                 logger.error(e)
 
     return wrapper
@@ -34,24 +44,32 @@ def safe(handler):
 
 def safe_c(handler):
     @wraps(handler)
-    async def wrapper(client: Client, obj, state):
+    async def wrapper(client, obj, state):
+        global ignore_update, active_tasks
+        loop = None
         try:
-            await handler(client, obj, state)
+            loop = asyncio.create_task(handler(client, obj, state))
+            active_tasks.append(loop)
+            if not ignore_update:
+                await loop
         except FloodWait as e:
-            logger.error(f"FloodWait - Sleeping for {e.value}. The bot stopped receiving updates")
-            await client.stop()
+            logger.error(f"FloodWait - bot ignored updates fpr {e.value} seconds")
+            for tasks in active_tasks:
+                tasks.cancel()
+            ignore_update = True
             await asyncio.sleep(e.value)
-            await client.start()
+            ignore_update = False
+        except asyncio.CancelledError:
+            active_tasks.remove(loop)
         except Exception as e:
-            if not isinstance(e, (UserIsBlocked, MessageNotModified, QueryIdInvalid, BadRequest)):
+            if not isinstance(e, (UserIsBlocked, MessageNotModified, QueryIdInvalid, BadRequest, MessageDeleteForbidden)):
                 logger.error(e)
-
     return wrapper
 
 
 def admin(handler):
     @wraps(handler)
-    async def wrapper(client: Client, obj: Message | CallbackQuery, *args, **kwargs):
+    async def wrapper(client, obj: Message | CallbackQuery, *args, **kwargs):
         user_id = obj.from_user.id
         if user_id == Config.ADMIN_ID:
             return await handler(client, obj, *args, **kwargs)
