@@ -134,89 +134,103 @@ async def search_partner(user_id: int) -> dict | None:
                     )
                 )
 
-                matched = await session.execute(
-                    select(User.id)
-                    .where(and_(*filters))
-                    .order_by(func.random())
-                    .limit(1)
-                    .with_for_update(skip_locked=True)
-                )
-                matched_scalar_id = matched.scalar_one_or_none()
-                matched_scalar    = await get_user_cache(matched_scalar_id)
-                if (
-                        matched_scalar and
-                        matched_scalar['current_state'] == State.SEARCHING and
-                        user['current_state'] == State.SEARCHING
-                ):
-                    try:
-                        partner_id = matched_scalar_id
-                        m_event = await get_event(partner_id)
-                        if not m_event:
+                wait = min(0.1 + attempts * 0.1, 5)
+                async with session.begin():
+                    matched = await session.execute(
+                        select(User.id)
+                        .where(and_(*filters))
+                        .order_by(func.random())
+                        .limit(1)
+                        .with_for_update()
+                    )
+                    matched_scalar_id = matched.scalar_one_or_none()
+                    matched_scalar    = await get_user_cache(matched_scalar_id)
+                    if (
+                            matched_scalar and
+                            matched_scalar['current_state'] == State.SEARCHING and
+                            user['current_state'] == State.SEARCHING
+                    ):
+                        try:
+                            partner_id = matched_scalar_id
+                            m_event = await get_event(partner_id)
+                            if not m_event:
+                                await session.execute(
+                                    update(User)
+                                    .where(User.id == partner_id)
+                                    .values(current_state=State.NONE)
+                                )
+                                await session.commit()
+                                matched_scalar = None
+                                await asyncio.sleep(wait)
+                                continue
+
+                            elif m_event.is_set():
+                                matched_scalar = None
+                                await asyncio.sleep(wait)
+                                continue
+
+                            partner_state = await get_value(partner_id, "current_state")
+                            if partner_state != State.SEARCHING:
+                                await asyncio.sleep(wait)
+                                continue
+
+                            user_state = await get_value(user_id, "current_state")
+
+                            if user_state != State.SEARCHING:
+                                await asyncio.sleep(wait)
+                                continue
+
+                            if not user['is_premium']:
+                                count = user['chat_count'] + 1
+                            else:
+                                count = 0
+
+                            if not matched_scalar['is_premium']:
+                                p_count = matched_scalar['chat_count'] + 1
+                            else:
+                                p_count = 0
+
+                            user_kwargs = dict(
+                                current_state=State.CHATTING,
+                                chatting_with=partner_id,
+                                chat_count=count
+                            )
+                            partner_kwargs = dict(
+                                current_state=State.CHATTING,
+                                chatting_with=user_id,
+                                chat_count=p_count
+                            )
+
+                            await session.execute(
+                                update(User)
+                                .where(User.id == user_id)
+                                .values(**user_kwargs)
+                            )
+
                             await session.execute(
                                 update(User)
                                 .where(User.id == partner_id)
-                                .values(current_state=State.NONE)
+                                .values(**partner_kwargs)
                             )
-                            await session.commit()
-                            matched_scalar = None
+
+                            user_kwargs['match_request_from'] = 0
+                            partner_kwargs['match_request_from'] = 0
+
+                            await asyncio.gather(
+                                update_user_cache(user_id, **user_kwargs),
+                                update_user_cache(partner_id, **partner_kwargs)
+                            )
+
+                            await create_chat_cache(user_id, partner_id)
+                            event.set()
+                            break
+                        except Exception as e:
+                            logger.error(e)
+                            await asyncio.sleep(wait)
                             continue
 
-                        elif m_event.is_set():
-                            matched_scalar = None
-                            continue
-
-                        if not user['is_premium']:
-                            count = user['chat_count'] + 1
-                        else:
-                            count = 0
-
-                        if not matched_scalar['is_premium']:
-                            p_count = matched_scalar['chat_count'] + 1
-                        else:
-                            p_count = 0
-
-                        user_kwargs = dict(
-                            current_state=State.CHATTING,
-                            chatting_with=partner_id,
-                            chat_count=count
-                        )
-                        partner_kwargs = dict(
-                            current_state=State.CHATTING,
-                            chatting_with=user_id,
-                            chat_count=p_count
-                        )
-
-                        await session.execute(
-                            update(User)
-                            .where(User.id == user_id)
-                            .values(**user_kwargs)
-                        )
-
-                        await session.execute(
-                            update(User)
-                            .where(User.id == partner_id)
-                            .values(**partner_kwargs)
-                        )
-
-                        await session.commit()
-
-                        await create_chat_cache(user_id, partner_id)
-
-                        user_kwargs['match_request_from'] = 0
-                        partner_kwargs['match_request_from'] = 0
-                        await asyncio.gather(
-                            update_user_cache(user_id, **user_kwargs),
-                            update_user_cache(partner_id, **partner_kwargs)
-                        )
-
-                    except Exception as e:
-                        logger.error(e)
-                        continue
-
-                    event.set()
-                    break
                 wait = min(0.1 + attempts*0.1 , 5)
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(wait)
                 attempts += 1
 
         if not event.is_set():

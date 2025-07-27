@@ -1,6 +1,5 @@
 import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from datetime import UTC
 from database.model import User, Subscription, get_session
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload

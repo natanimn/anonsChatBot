@@ -1,12 +1,11 @@
 import asyncio
-from pyrogram import Client
-from schedules.schedule import async_scheduler, add_unsubscription, add_unrestrict
+from pyrogram import Client, idle
+from schedules.schedule import add_unsubscription, add_unrestrict, async_scheduler
 from config import Config
 from database.model import Base, async_engine
 from pyrogram_patch.fsm.storages import MemoryStorage
 from pyrogram_patch.patch import patch
 from pyrogram.types import BotCommand
-from cache.cache import reset_users_cache
 import logging
 
 logging.basicConfig(
@@ -48,7 +47,7 @@ async def run_bot():
             'root': 'plugins'
         },
         workers=200,
-        skip_updates=False,
+        skip_updates=True
     )
 
     patch_manager = patch(bot)
@@ -59,19 +58,14 @@ async def run_bot():
 
     await asyncio.gather(
         add_unrestrict(),
-        add_unsubscription(),
-        reset_users_cache()
+        add_unsubscription()
     )
-    async_scheduler.start()
-    await bot.start()
 
-    await add_commands(bot)
-    try:
-        print("BOT STARTED")
-        await asyncio.Event().wait()
-    finally:
-        async_scheduler.shutdown()
-        await bot.stop()
+    async with bot:
+        async_scheduler.start()
+        print("Bot Started...")
+        await idle()
 
 if __name__ == '__main__':
-    asyncio.run(run_bot())
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(run_bot())
