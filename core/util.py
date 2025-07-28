@@ -141,7 +141,7 @@ async def search_partner(user_id: int) -> dict | None:
                         .where(and_(*filters))
                         .order_by(func.random())
                         .limit(1)
-                        .with_for_update()
+                        .with_for_update(skip_locked=True)
                     )
                     matched_scalar_id = matched.scalar_one_or_none()
                     matched_scalar    = await get_user_cache(matched_scalar_id)

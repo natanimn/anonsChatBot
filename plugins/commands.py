@@ -17,6 +17,7 @@ from cache.cache import (
     get_chat_cache,
     create_chat_cache
 )
+from core.chat import add_user_to_queue, remove_user_from_queue
 from core import check
 from pyrogram.errors.rpc_error import RPCError
 from core.var import COUNTRIES
@@ -117,122 +118,123 @@ async def chat(bot: app, message: Message, **kwargs):
         await message.reply(
             "🔎 __Searching for a partner__",
         )
+        await add_user_to_queue(user_id)
 
-        event = await create_event(user_id) # create an event first
-        task  = asyncio.create_task(search_partner(user_id))
-        matched_user = await task
-
-        if event.is_set():
-            user = await get_user_cache(user_id)
-            if not matched_user and user['current_state'] == State.SEARCHING:
-                try:
-                    await message.reply(
-                        "😞 __Sorry, we could not get any partner for you, "
-                        "based on your current preference__\n\n"
-                        "❕ **Change your current preference, and try again**",
-                        reply_markup=keyboard.main()
-                    )
-                finally:
-                    await update_user(user_id, current_state=State.NONE)
-                    await delete_event(user_id)
-
-            elif matched_user:
-                new_state = user['current_state']
-                partner_state = matched_user['current_state']
-
-                if new_state == State.CHATTING and partner_state == State.CHATTING:
-                    partner_country = ''
-                    partner_region = ''
-                    user_country = ''
-                    user_region = ''
-
-                    if matched_user['country'] or user['country']:
-                        for k, v in  COUNTRIES.items():
-                            if matched_user['country'] == v:
-                                partner_country = k
-                            if user['country'] == v:
-                                user_country = k
-
-                    if matched_user['india_region']:
-                        partner_region = matched_user['india_region']
-
-                    if user['india_region']:
-                        user_region = user['india_region']
-
-                    partner_full_country = partner_country + ('/' +  partner_region if partner_region else '')
-                    user_full_country = user_country + ('/' + user_region if user_region else '')
-                    partner_id = matched_user['id']
-                    try:
-                        age = 'Unknown' if int(matched_user['age']) == 0 else matched_user['age']
-                        gender = matched_user['gender'] if user['is_premium'] else '||For Premium||'
-                        await message.reply(
-                            "**✅ Partner found**\n\n"
-                            f"**🔢 __Age: {age}\n__**"
-                            f"**👥 __Gender: {gender}__**\n"
-                            f"**🌍 __Country: {partner_full_country}__**\n\n"
-                            f"🚫 **Links are blocked**.\n"
-                            f"__✔️ You can send media after 2 minutes__\n\n"
-                            f"**/exit - Leave Partner**",
-
-                        )
-                    except UserIsBlocked:
-                        try:
-                            await bot.send_message(
-                                partner_id,
-                                "**Error**\n\n"
-                                "__The partner we have found you just blocked the bot.\n\n"
-                                "Send /chat and find new partner__",
-                            )
-                        finally:
-                            await asyncio.gather(
-                                update_user(user_id,
-                                            current_state=State.NONE,
-                                            last_partner_id=partner_id,
-                                            chatting_with=0),
-                                update_user(partner_id,
-                                            current_state=State.NONE,
-                                            last_partner_id=user_id,
-                                            chatting_with=0)
-                            )
-                            for _id in [partner_id, user_id]:
-                                await delete_event(_id)
-                    else:
-                        try:
-                            age = 'Unknown' if int(user['age']) == 0 else user['age']
-                            gender = user['gender'] if matched_user['is_premium'] else '||For Premium||'
-                            await bot.send_message(
-                                partner_id,
-                                "**✅ Partner found**\n\n"
-                                f"**🔢 __Age: {age}\n__**"
-                                f"**👥 __Gender: {gender}__**\n"
-                                f"**🌍 __Country: {user_full_country}__**\n\n"
-                                f"🚫 **Links are blocked**.\n"
-                                f"__✔️ You can send media after 2 minutes__\n\n"
-                                f"**/exit - Leave Partner**",
-                            )
-                        except UserIsBlocked:
-                            try:
-                                await message.reply(
-                                    "**Error**\n\n"
-                                    "__The partner we have found you just blocked the bot.\n\n"
-                                    "Send /chat and find new partner__",
-                                )
-                            finally:
-                                await asyncio.gather(
-                                    update_user(user_id,
-                                                current_state=State.NONE,
-                                                last_partner_id=partner_id,
-                                                chatting_with=0),
-                                    update_user(partner_id,
-                                                current_state=State.NONE,
-                                                last_partner_id=user_id,
-                                                chatting_with=0)
-                                )
-                                for _id in [partner_id, user_id]:
-                                    await delete_event(_id)
-
-            await delete_event(user_id) # Event needed no more, delete it
-            await asyncio.sleep(1)
+        # event = await create_event(user_id) # create an event first
+        # task  = asyncio.create_task(search_partner(user_id))
+        # matched_user = await task
+        #
+        # if event.is_set():
+        #     user = await get_user_cache(user_id)
+        #     if not matched_user and user['current_state'] == State.SEARCHING:
+        #         try:
+        #             await message.reply(
+        #                 "😞 __Sorry, we could not get any partner for you, "
+        #                 "based on your current preference__\n\n"
+        #                 "❕ **Change your current preference, and try again**",
+        #                 reply_markup=keyboard.main()
+        #             )
+        #         finally:
+        #             await update_user(user_id, current_state=State.NONE)
+        #             await delete_event(user_id)
+        #
+        #     elif matched_user:
+        #         new_state = user['current_state']
+        #         partner_state = matched_user['current_state']
+        #
+        #         if new_state == State.CHATTING and partner_state == State.CHATTING:
+        #             partner_country = ''
+        #             partner_region = ''
+        #             user_country = ''
+        #             user_region = ''
+        #
+        #             if matched_user['country'] or user['country']:
+        #                 for k, v in  COUNTRIES.items():
+        #                     if matched_user['country'] == v:
+        #                         partner_country = k
+        #                     if user['country'] == v:
+        #                         user_country = k
+        #
+        #             if matched_user['india_region']:
+        #                 partner_region = matched_user['india_region']
+        #
+        #             if user['india_region']:
+        #                 user_region = user['india_region']
+        #
+        #             partner_full_country = partner_country + ('/' +  partner_region if partner_region else '')
+        #             user_full_country = user_country + ('/' + user_region if user_region else '')
+        #             partner_id = matched_user['id']
+        #             try:
+        #                 age = 'Unknown' if int(matched_user['age']) == 0 else matched_user['age']
+        #                 gender = matched_user['gender'] if user['is_premium'] else '||For Premium||'
+        #                 await message.reply(
+        #                     "**✅ Partner found**\n\n"
+        #                     f"**🔢 __Age: {age}\n__**"
+        #                     f"**👥 __Gender: {gender}__**\n"
+        #                     f"**🌍 __Country: {partner_full_country}__**\n\n"
+        #                     f"🚫 **Links are blocked**.\n"
+        #                     f"__✔️ You can send media after 2 minutes__\n\n"
+        #                     f"**/exit - Leave Partner**",
+        #
+        #                 )
+        #             except UserIsBlocked:
+        #                 try:
+        #                     await bot.send_message(
+        #                         partner_id,
+        #                         "**Error**\n\n"
+        #                         "__The partner we have found you just blocked the bot.\n\n"
+        #                         "Send /chat and find new partner__",
+        #                     )
+        #                 finally:
+        #                     await asyncio.gather(
+        #                         update_user(user_id,
+        #                                     current_state=State.NONE,
+        #                                     last_partner_id=partner_id,
+        #                                     chatting_with=0),
+        #                         update_user(partner_id,
+        #                                     current_state=State.NONE,
+        #                                     last_partner_id=user_id,
+        #                                     chatting_with=0)
+        #                     )
+        #                     for _id in [partner_id, user_id]:
+        #                         await delete_event(_id)
+        #             else:
+        #                 try:
+        #                     age = 'Unknown' if int(user['age']) == 0 else user['age']
+        #                     gender = user['gender'] if matched_user['is_premium'] else '||For Premium||'
+        #                     await bot.send_message(
+        #                         partner_id,
+        #                         "**✅ Partner found**\n\n"
+        #                         f"**🔢 __Age: {age}\n__**"
+        #                         f"**👥 __Gender: {gender}__**\n"
+        #                         f"**🌍 __Country: {user_full_country}__**\n\n"
+        #                         f"🚫 **Links are blocked**.\n"
+        #                         f"__✔️ You can send media after 2 minutes__\n\n"
+        #                         f"**/exit - Leave Partner**",
+        #                     )
+        #                 except UserIsBlocked:
+        #                     try:
+        #                         await message.reply(
+        #                             "**Error**\n\n"
+        #                             "__The partner we have found you just blocked the bot.\n\n"
+        #                             "Send /chat and find new partner__",
+        #                         )
+        #                     finally:
+        #                         await asyncio.gather(
+        #                             update_user(user_id,
+        #                                         current_state=State.NONE,
+        #                                         last_partner_id=partner_id,
+        #                                         chatting_with=0),
+        #                             update_user(partner_id,
+        #                                         current_state=State.NONE,
+        #                                         last_partner_id=user_id,
+        #                                         chatting_with=0)
+        #                         )
+        #                         for _id in [partner_id, user_id]:
+        #                             await delete_event(_id)
+        #
+        #     await delete_event(user_id) # Event needed no more, delete it
+        #     await asyncio.sleep(1)
 
 
 @app.on_message(filters.private & filters.command('exit'))
@@ -263,8 +265,12 @@ async def exit_chat(bot: app, message: Message, **kwargs):
             )
 
     elif state == State.SEARCHING:
-        await update_user(user_id, current_state=State.NONE)
+        await asyncio.gather(
+            remove_user_from_queue(user_id),
+            update_user(user_id, current_state=State.NONE)
+        )
         await message.reply("**🚫 Search exited**", reply_markup=keyboard.main())
+        
     else:
         await message.reply("**There is not chat/search to exit**")
 

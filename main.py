@@ -7,6 +7,7 @@ from pyrogram_patch.fsm.storages import MemoryStorage
 from pyrogram_patch.patch import patch
 from pyrogram.types import BotCommand
 import logging
+from core.chat import background_match
 
 logging.basicConfig(
     level=logging.ERROR,
@@ -64,7 +65,7 @@ async def run_bot():
     async with bot:
         async_scheduler.start()
         print("Bot Started...")
-        await idle()
+        await asyncio.gather(idle(), background_match(bot))
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
