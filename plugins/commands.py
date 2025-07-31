@@ -270,7 +270,7 @@ async def exit_chat(bot: app, message: Message, **kwargs):
             update_user(user_id, current_state=State.NONE)
         )
         await message.reply("**🚫 Search exited**", reply_markup=keyboard.main())
-        
+
     else:
         await message.reply("**There is not chat/search to exit**")
 

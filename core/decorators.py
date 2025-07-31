@@ -28,13 +28,16 @@ def safe(handler):
                 await loop
         except FloodWait as e:
             logger.error(f"FloodWait - bot ignored updates fpr {e.value} seconds")
+            ignore_update = True
             for tasks in active_tasks:
                 tasks.cancel()
-            ignore_update = True
             await asyncio.sleep(e.value)
             ignore_update = False
         except asyncio.CancelledError:
             active_tasks.remove(loop)
+        except (TimeoutError, ConnectionError, OSError,
+                ConnectionResetError, ConnectionRefusedError, ConnectionAbortedError):
+            raise KeyboardInterrupt
         except Exception as e:
             if not isinstance(e, (UserIsBlocked, MessageNotModified, QueryIdInvalid, BadRequest, MessageDeleteForbidden)):
                 logger.error(e)
@@ -54,13 +57,18 @@ def safe_c(handler):
                 await loop
         except FloodWait as e:
             logger.error(f"FloodWait - bot ignored updates fpr {e.value} seconds")
+            ignore_update = True
             for tasks in active_tasks:
                 tasks.cancel()
-            ignore_update = True
             await asyncio.sleep(e.value)
             ignore_update = False
         except asyncio.CancelledError:
             active_tasks.remove(loop)
+
+        except (TimeoutError, ConnectionError, OSError,
+                ConnectionResetError, ConnectionRefusedError, ConnectionAbortedError):
+            raise KeyboardInterrupt
+
         except Exception as e:
             if not isinstance(e, (UserIsBlocked, MessageNotModified, QueryIdInvalid, BadRequest, MessageDeleteForbidden)):
                 logger.error(e)
